@@ -1,0 +1,5 @@
+.idea
+*.beam
+logs/
+.DS_Store
+.rebar/
