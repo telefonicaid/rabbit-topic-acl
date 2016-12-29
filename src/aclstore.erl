@@ -31,7 +31,7 @@
 
 %% API
 -export([start/2, stop/1, install/1]).
--export([add_permission/3]).
+-export([add_permission/3, get_permissions/1]).
 
 -record(aclstore_record, {
   user,
@@ -52,7 +52,7 @@ install(Nodes) ->
     [{attributes, record_info(fields, aclstore_record)},
       {index, [#aclstore_record.topic]},
       {disc_copies, Nodes},
-      {type, set}]),
+      {type, bag}]),
   rpc:multicall(Nodes, application, stop, [mnesia]).
 
 add_permission(User, Topic, Permission) ->
@@ -64,3 +64,11 @@ add_permission(User, Topic, Permission) ->
       })
       end,
   mnesia:activity(transaction, F).
+
+get_permissions(User) ->
+  F = fun() ->
+        Permissions = mnesia:read({aclstore_record, User}),
+        [{Topic, Permission} || {aclstore_record, _, Topic, Permission} <- Permissions ]
+      end,
+  mnesia:activity(transaction, F).
+
