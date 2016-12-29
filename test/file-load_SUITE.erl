@@ -31,9 +31,9 @@
 -include_lib("common_test/include/ct.hrl").
 -export([init_per_suite/1, end_per_suite/1, all/0,
          init_per_testcase/2, end_per_testcase/2]).
--export([add_permission/1,permissions_by_user/1]).
+-export([add_permission/1,permissions_by_user/1,remove_permissions/1]).
 
-all() -> [add_permission, permissions_by_user].
+all() -> [add_permission, permissions_by_user, remove_permissions].
 
 init_per_suite(Config) ->
   Priv = ?config(priv_dir, Config),
@@ -64,3 +64,8 @@ add_permission(_Config) ->
 permissions_by_user(_Config) ->
   [{"root/subroot/+", write},
     {"root/messages",read}] = aclstore:get_permissions("johndoe").
+
+remove_permissions(_Config) ->
+  aclstore:remove_permissions("johndoe"),
+  [] = aclstore:get_permissions("johndoe").
+

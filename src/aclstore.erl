@@ -31,7 +31,7 @@
 
 %% API
 -export([start/2, stop/1, install/1]).
--export([add_permission/3, get_permissions/1]).
+-export([add_permission/3, get_permissions/1, remove_permissions/1]).
 
 -record(aclstore_record, {
   user,
@@ -71,4 +71,9 @@ get_permissions(User) ->
         [{Topic, Permission} || {aclstore_record, _, Topic, Permission} <- Permissions ]
       end,
   mnesia:activity(transaction, F).
+
+remove_permissions(User) ->
+  F = fun() -> mnesia:delete({aclstore_record, User}) end,
+  mnesia:activity(transaction, F).
+
 
