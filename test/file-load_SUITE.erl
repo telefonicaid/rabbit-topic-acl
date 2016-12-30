@@ -31,9 +31,9 @@
 -include_lib("common_test/include/ct.hrl").
 -export([init_per_suite/1, end_per_suite/1, all/0,
          init_per_testcase/2, end_per_testcase/2]).
--export([add_permission/1,permissions_by_user/1,remove_permissions/1,load_permissions_file/1]).
+-export([add_permission/1,permissions_by_user/1,remove_permissions/1,load_permissions_file/1, install_permissions_file/1]).
 
-all() -> [add_permission, permissions_by_user, remove_permissions, load_permissions_file].
+all() -> [add_permission, permissions_by_user, remove_permissions, load_permissions_file, install_permissions_file].
 
 init_per_suite(Config) ->
   Priv = ?config(priv_dir, Config),
@@ -70,8 +70,13 @@ remove_permissions(_Config) ->
 load_permissions_file(Config) ->
   DataDir = ?config(data_dir, Config),
   Filename = string:concat(DataDir, "aclfile1"),
-  [{"jenniferdoe","read","root/messages"},
-    {"jackdoe","readwrite","root/subroot/+"},
-    {"jackdoe","read","root/messages"},
-    {global,"read","#"}] = aclstore:read_permissions_file(Filename).
+  [{"jenniferdoe",read, "root/messages"},
+    {"jackdoe",readwrite,"root/subroot/+"},
+    {"jackdoe",read,"root/messages"},
+    {global,read,"#"}] = aclstore:read_permissions_file(Filename).
 
+install_permissions_file(Config) ->
+  DataDir = ?config(data_dir, Config),
+  Filename = string:concat(DataDir, "aclfile1"),
+  aclstore:load_permissions_file(Filename),
+  [{read, "root/messages"}] = aclstore:get_permissions("jenniferdoe").

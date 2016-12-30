@@ -32,7 +32,7 @@
 %% API
 -export([start/2, stop/1, install/1]).
 -export([add_permission/3, get_permissions/1, remove_permissions/1, read_permissions_file/1]).
--export([extract_permissions/2, tokenize_line/1]).
+-export([extract_permissions/2, tokenize_line/1, load_permissions_file/1]).
 
 -record(aclstore_record, {
   user,
@@ -77,10 +77,9 @@ remove_permissions(User) ->
   F = fun() -> mnesia:delete({aclstore_record, User}) end,
   mnesia:activity(transaction, F).
 
-
 extract_permissions(Item, {User, Permission_list}) ->
   case Item of
-    {topic, [Permission, Topic]} -> {User, [{User, Permission, Topic}|Permission_list]};
+    {topic, [Permission, Topic]} -> {User, [{User, list_to_atom(Permission), Topic}|Permission_list]};
     {user, [Name]} -> {Name, Permission_list};
     _ -> {error, syntax_error}
   end.
@@ -101,3 +100,7 @@ read_permissions_file(Filename) ->
    Tokens = lists:map(fun tokenize_line/1, Filtered),
    {_, Permissions} = lists:foldl(fun extract_permissions/2, {global, []}, Tokens),
    Permissions.
+
+load_permissions_file(Filename) ->
+  Permissions = read_permissions_file(Filename),
+  [add_permission(User, Permission, Topic) || {User, Permission, Topic} <- Permissions].
