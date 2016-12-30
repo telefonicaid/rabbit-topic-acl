@@ -31,9 +31,9 @@
 -include_lib("common_test/include/ct.hrl").
 -export([init_per_suite/1, end_per_suite/1, all/0,
          init_per_testcase/2, end_per_testcase/2]).
--export([add_permission/1,permissions_by_user/1,remove_permissions/1]).
+-export([add_permission/1,permissions_by_user/1,remove_permissions/1,load_permissions_file/1]).
 
-all() -> [add_permission, permissions_by_user, remove_permissions].
+all() -> [add_permission, permissions_by_user, remove_permissions, load_permissions_file].
 
 init_per_suite(Config) ->
   Priv = ?config(priv_dir, Config),
@@ -47,25 +47,31 @@ end_per_suite(_Config) ->
   application:stop(mnesia),
   ok.
 
-init_per_testcase(add_permission, Config) ->
-  Config;
-
 init_per_testcase(_, Config) ->
   aclstore:add_permission("janedoe", "root/messages", write),
   aclstore:add_permission("johndoe", "root/messages", read),
   Config.
 
 end_per_testcase(_, _Config) ->
+  aclstore:remove_permissions("johndoe"),
+  aclstore:remove_permissions("janedoe"),
   ok.
 
 add_permission(_Config) ->
   ok = aclstore:add_permission("johndoe", "root/subroot/+", write).
 
 permissions_by_user(_Config) ->
-  [{"root/subroot/+", write},
-    {"root/messages",read}] = aclstore:get_permissions("johndoe").
+  [{"root/messages",read}] = aclstore:get_permissions("johndoe").
 
 remove_permissions(_Config) ->
   aclstore:remove_permissions("johndoe"),
   [] = aclstore:get_permissions("johndoe").
+
+load_permissions_file(Config) ->
+  DataDir = ?config(data_dir, Config),
+  Filename = string:concat(DataDir, "aclfile1"),
+  [{"jenniferdoe","read","root/messages"},
+    {"jackdoe","readwrite","root/subroot/+"},
+    {"jackdoe","read","root/messages"},
+    {global,"read","#"}] = aclstore:read_permissions_file(Filename).
 
