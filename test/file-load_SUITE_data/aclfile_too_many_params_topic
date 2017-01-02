@@ -1,0 +1,10 @@
+topic read #
+
+# Topic permissions for Jack Doe user
+user jackdoe
+topic read root/messages anotherunexpectedparam
+topic readwrite root/subroot/+
+
+# Topic permissions for Jennifer Doe
+user jenniferdoe
+topic read root/messages

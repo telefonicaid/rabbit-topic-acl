@@ -31,7 +31,8 @@
 
 %% API
 -export([start/2, stop/1, install/1]).
--export([add_permission/3]).
+-export([add_permission/3, get_permissions/1, remove_permissions/1, read_permissions_file/1]).
+-export([extract_permissions/2, tokenize_line/1, load_permissions_file/1]).
 
 -record(aclstore_record, {
   user,
@@ -52,7 +53,7 @@ install(Nodes) ->
     [{attributes, record_info(fields, aclstore_record)},
       {index, [#aclstore_record.topic]},
       {disc_copies, Nodes},
-      {type, set}]),
+      {type, bag}]),
   rpc:multicall(Nodes, application, stop, [mnesia]).
 
 add_permission(User, Topic, Permission) ->
@@ -64,3 +65,54 @@ add_permission(User, Topic, Permission) ->
       })
       end,
   mnesia:activity(transaction, F).
+
+get_permissions(User) ->
+  F = fun() ->
+        Permissions = mnesia:read({aclstore_record, User}),
+        [{Topic, Permission} || {aclstore_record, _, Topic, Permission} <- Permissions ]
+      end,
+  mnesia:activity(transaction, F).
+
+remove_permissions(User) ->
+  F = fun() -> mnesia:delete({aclstore_record, User}) end,
+  mnesia:activity(transaction, F).
+
+extract_permissions(Item, {User, Permission_list}) ->
+  case Item of
+    {topic, [Permission, Topic]} when Permission =:= "read"; Permission =:= "readwrite"; Permission =:= "write"  ->
+      {User, [{User, list_to_atom(Permission), Topic}|Permission_list]};
+
+    {user, [Name]} -> {Name, Permission_list};
+    _ -> throw(syntax_error)
+  end.
+
+tokenize_line(Line) ->
+  Tokenized = string:tokens(Line, " "),
+  case hd(Tokenized) of
+    "topic"  -> {topic, tl(Tokenized)};
+    "user" -> {user, tl(Tokenized)};
+    _ -> throw(syntax_error)
+  end.
+
+read_permissions_file(Filename) ->
+   IFile = case file:read_file(Filename) of
+             {ok, IFileObj} -> IFileObj;
+             {error, enoent} -> throw(file_not_found)
+   end,
+   Contents = binary_to_list(IFile),
+   Tokenized = string:tokens(Contents, "\n"),
+   Filtered = [X || X <- Tokenized, hd(X) =/= $#],
+   Tokens = lists:map(fun tokenize_line/1, Filtered),
+   {_, Permissions} = lists:foldl(fun extract_permissions/2, {global, []}, Tokens),
+   Permissions.
+
+load_permissions_file(Filename) ->
+  try
+    Permissions = read_permissions_file(Filename),
+    [add_permission(User, Permission, Topic) || {User, Permission, Topic} <- Permissions]
+  of
+    _ -> ok
+  catch
+    throw:syntax_error -> syntax_error;
+    throw:file_not_found -> file_not_found
+  end.

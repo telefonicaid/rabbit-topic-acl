@@ -31,9 +31,14 @@
 -include_lib("common_test/include/ct.hrl").
 -export([init_per_suite/1, end_per_suite/1, all/0,
          init_per_testcase/2, end_per_testcase/2]).
--export([add_permission/1]).
+-export([add_permission/1,permissions_by_user/1,remove_permissions/1,load_permissions_file/1,
+  install_permissions_file/1, syntax_error_unexistent_command/1, syntax_error_parameter_number/1,
+  syntax_error_with_file/2, missing_permissions_file/1, syntax_error_wrong_permissions/1,
+  permissions_for_unexistent_user/1, remove_unknownuser/1]).
 
-all() -> [add_permission].
+all() -> [add_permission, permissions_by_user, remove_permissions, load_permissions_file, install_permissions_file,
+          syntax_error_unexistent_command, syntax_error_parameter_number, missing_permissions_file,
+          syntax_error_wrong_permissions, permissions_for_unexistent_user, remove_unknownuser].
 
 init_per_suite(Config) ->
   Priv = ?config(priv_dir, Config),
@@ -47,11 +52,65 @@ end_per_suite(_Config) ->
   application:stop(mnesia),
   ok.
 
-init_per_testcase(add_permission, Config) ->
+init_per_testcase(_, Config) ->
+  aclstore:add_permission("janedoe", "root/messages", write),
+  aclstore:add_permission("johndoe", "root/messages", read),
   Config.
 
 end_per_testcase(_, _Config) ->
+  aclstore:remove_permissions("johndoe"),
+  aclstore:remove_permissions("janedoe"),
   ok.
 
 add_permission(_Config) ->
-  ok = aclstore:add_permission("johndoe", "root/subroot/+", "write").
+  ok = aclstore:add_permission("johndoe", "root/subroot/+", write).
+
+permissions_by_user(_Config) ->
+  [{"root/messages",read}] = aclstore:get_permissions("johndoe").
+
+permissions_for_unexistent_user(_Config) ->
+  [] = aclstore:get_permissions("johnunknown").
+
+remove_permissions(_Config) ->
+  ok = aclstore:remove_permissions("johndoe"),
+  [] = aclstore:get_permissions("johndoe").
+
+remove_unknownuser(_Config) ->
+  ok = aclstore:remove_permissions("unknownuser").
+
+load_permissions_file(Config) ->
+  DataDir = ?config(data_dir, Config),
+  Filename = string:concat(DataDir, "aclfile1"),
+  [{"jenniferdoe",read, "root/messages"},
+    {"jackdoe",readwrite,"root/subroot/+"},
+    {"jackdoe",read,"root/messages"},
+    {global,read,"#"}] = aclstore:read_permissions_file(Filename).
+
+install_permissions_file(Config) ->
+  DataDir = ?config(data_dir, Config),
+  Filename = string:concat(DataDir, "aclfile1"),
+  ok = aclstore:load_permissions_file(Filename),
+  [{read, "root/messages"}] = aclstore:get_permissions("jenniferdoe").
+
+syntax_error_with_file(Config, Filename) ->
+  DataDir = ?config(data_dir, Config),
+  Fullname = string:concat(DataDir, Filename),
+  syntax_error = aclstore:load_permissions_file(Fullname).
+
+syntax_error_unexistent_command(Config) ->
+  syntax_error_with_file(Config, "aclfile_wrongcommand").
+
+syntax_error_parameter_number(Config) ->
+  syntax_error_with_file(Config, "aclfile_too_many_params_topic"),
+  syntax_error_with_file(Config, "aclfile_too_many_params_user"),
+  syntax_error_with_file(Config, "aclfile_too_few_params_topic"),
+  syntax_error_with_file(Config, "aclfile_too_few_params_user").
+
+syntax_error_wrong_permissions(Config) ->
+  syntax_error_with_file(Config, "aclfile_wrong_permissions").
+
+missing_permissions_file(Config) ->
+  DataDir = ?config(data_dir, Config),
+  Filename = string:concat(DataDir, "aclfile_unexistent"),
+  file_not_found = aclstore:load_permissions_file(Filename).
+
