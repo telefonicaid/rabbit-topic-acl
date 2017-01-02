@@ -79,7 +79,9 @@ remove_permissions(User) ->
 
 extract_permissions(Item, {User, Permission_list}) ->
   case Item of
-    {topic, [Permission, Topic]} -> {User, [{User, list_to_atom(Permission), Topic}|Permission_list]};
+    {topic, [Permission, Topic]} when Permission =:= "read"; Permission =:= "readwrite"; Permission =:= "write"  ->
+      {User, [{User, list_to_atom(Permission), Topic}|Permission_list]};
+
     {user, [Name]} -> {Name, Permission_list};
     _ -> throw(syntax_error)
   end.
