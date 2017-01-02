@@ -33,11 +33,12 @@
          init_per_testcase/2, end_per_testcase/2]).
 -export([add_permission/1,permissions_by_user/1,remove_permissions/1,load_permissions_file/1,
   install_permissions_file/1, syntax_error_unexistent_command/1, syntax_error_parameter_number/1,
-  syntax_error_with_file/2, missing_permissions_file/1, syntax_error_wrong_permissions/1]).
+  syntax_error_with_file/2, missing_permissions_file/1, syntax_error_wrong_permissions/1,
+  permissions_for_unexistent_user/1, remove_unknownuser/1]).
 
 all() -> [add_permission, permissions_by_user, remove_permissions, load_permissions_file, install_permissions_file,
           syntax_error_unexistent_command, syntax_error_parameter_number, missing_permissions_file,
-          syntax_error_wrong_permissions].
+          syntax_error_wrong_permissions, permissions_for_unexistent_user, remove_unknownuser].
 
 init_per_suite(Config) ->
   Priv = ?config(priv_dir, Config),
@@ -67,9 +68,15 @@ add_permission(_Config) ->
 permissions_by_user(_Config) ->
   [{"root/messages",read}] = aclstore:get_permissions("johndoe").
 
+permissions_for_unexistent_user(_Config) ->
+  [] = aclstore:get_permissions("johnunknown").
+
 remove_permissions(_Config) ->
-  aclstore:remove_permissions("johndoe"),
+  ok = aclstore:remove_permissions("johndoe"),
   [] = aclstore:get_permissions("johndoe").
+
+remove_unknownuser(_Config) ->
+  ok = aclstore:remove_permissions("unknownuser").
 
 load_permissions_file(Config) ->
   DataDir = ?config(data_dir, Config),
@@ -106,10 +113,4 @@ missing_permissions_file(Config) ->
   DataDir = ?config(data_dir, Config),
   Filename = string:concat(DataDir, "aclfile_unexistent"),
   file_not_found = aclstore:load_permissions_file(Filename).
-
-%% User not found in mnesia
-
-%% Permissions not in [read, readwrite, write]
-
-%% Remove unexistent user
 
