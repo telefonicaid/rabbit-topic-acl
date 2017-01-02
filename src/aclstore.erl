@@ -81,7 +81,7 @@ extract_permissions(Item, {User, Permission_list}) ->
   case Item of
     {topic, [Permission, Topic]} -> {User, [{User, list_to_atom(Permission), Topic}|Permission_list]};
     {user, [Name]} -> {Name, Permission_list};
-    _ -> {error, syntax_error}
+    _ -> throw(syntax_error)
   end.
 
 tokenize_line(Line) ->
@@ -89,7 +89,7 @@ tokenize_line(Line) ->
   case hd(Tokenized) of
     "topic"  -> {topic, tl(Tokenized)};
     "user" -> {user, tl(Tokenized)};
-    _ -> {error, syntax_error}
+    _ -> throw(syntax_error)
   end.
 
 read_permissions_file(Filename) ->
@@ -102,5 +102,11 @@ read_permissions_file(Filename) ->
    Permissions.
 
 load_permissions_file(Filename) ->
-  Permissions = read_permissions_file(Filename),
-  [add_permission(User, Permission, Topic) || {User, Permission, Topic} <- Permissions].
+  try
+    Permissions = read_permissions_file(Filename),
+    [add_permission(User, Permission, Topic) || {User, Permission, Topic} <- Permissions]
+  of
+    _ -> ok
+  catch
+    throw:syntax_error -> syntax_error
+  end.
