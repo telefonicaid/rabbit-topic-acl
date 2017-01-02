@@ -93,7 +93,10 @@ tokenize_line(Line) ->
   end.
 
 read_permissions_file(Filename) ->
-   {ok, IFile} = file:read_file(Filename),
+   IFile = case file:read_file(Filename) of
+             {ok, IFileObj} -> IFileObj;
+             {error, enoent} -> throw(file_not_found)
+   end,
    Contents = binary_to_list(IFile),
    Tokenized = string:tokens(Contents, "\n"),
    Filtered = [X || X <- Tokenized, hd(X) =/= $#],
@@ -108,5 +111,6 @@ load_permissions_file(Filename) ->
   of
     _ -> ok
   catch
-    throw:syntax_error -> syntax_error
+    throw:syntax_error -> syntax_error;
+    throw:file_not_found -> file_not_found
   end.

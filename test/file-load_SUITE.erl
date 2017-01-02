@@ -33,10 +33,10 @@
          init_per_testcase/2, end_per_testcase/2]).
 -export([add_permission/1,permissions_by_user/1,remove_permissions/1,load_permissions_file/1,
   install_permissions_file/1, syntax_error_unexistent_command/1, syntax_error_parameter_number/1,
-  syntax_error_parameter_number_with_file/2]).
+  syntax_error_parameter_number_with_file/2, missing_permissions_file/1]).
 
 all() -> [add_permission, permissions_by_user, remove_permissions, load_permissions_file, install_permissions_file,
-          syntax_error_unexistent_command, syntax_error_parameter_number].
+          syntax_error_unexistent_command, syntax_error_parameter_number, missing_permissions_file].
 
 init_per_suite(Config) ->
   Priv = ?config(priv_dir, Config),
@@ -100,18 +100,14 @@ syntax_error_parameter_number(Config) ->
   syntax_error_parameter_number_with_file(Config, "aclfile_too_few_params_topic"),
   syntax_error_parameter_number_with_file(Config, "aclfile_too_few_params_user").
 
+missing_permissions_file(Config) ->
+  DataDir = ?config(data_dir, Config),
+  Filename = string:concat(DataDir, "aclfile_unexistent"),
+  file_not_found = aclstore:load_permissions_file(Filename).
 
-%% Syntax errors in the file
-%% - Unexistent command
-%% - Missing parameters in topic
-%% - Too much parameters in topic
-%% - Too much parameters in user
-
-%% ACL File not found
 %% User not found in mnesia
 
 %% Permissions not in [read, readwrite, write]
 
 %% Remove unexistent user
 
-%%
