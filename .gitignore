@@ -3,3 +3,9 @@
 logs/
 .DS_Store
 .rebar/
+.erlang.mk
+rabbitmq_topic_acl.d
+plugins
+deps/
+ebin/rabbitmq_topic_acl.app
+*.dump

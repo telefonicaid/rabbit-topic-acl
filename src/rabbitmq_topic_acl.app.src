@@ -1,0 +1,8 @@
+{application,rabbitmq_topic_acl,
+             [{description,"Rabbit MQ Plugin for adding ACL permissions for topics"},
+              {vsn,"1.0.0"},
+              {registered,[]},
+              {applications,[kernel,stdlib,mnesia,rabbit_common, rabbit, amqp_client]},
+              {mod,{topicaclplugin,[]}},
+              {env,[{exchange, <<"metronome">>}]},
+              {modules,[aclstore,aclstore_sup]}]}.
