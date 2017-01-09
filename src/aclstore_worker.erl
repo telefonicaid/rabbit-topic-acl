@@ -32,7 +32,6 @@
 %% API
 -export([extract_permissions/2, tokenize_line/1, install/1, read_permissions_file/1, load_permissions_file/1]).
 -export([start_link/0, init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
--export([add_permission/4, get_permissions/2, remove_permissions/2, read_permissions_file/2, load_permissions_file/2]).
 
 -record(aclstore_record, {
   user,
@@ -63,24 +62,6 @@ handle_info(_, State) ->
 
 code_change(_, State, _) ->
   {ok, State}.
-
-add_permission(Pid, User, Topic, Permission) ->
-  gen_server:call(Pid, {add, User, Topic, Permission}).
-
-get_permissions(Pid, User) ->
-  gen_server:call(Pid, {get, User}).
-
-
-remove_permissions(Pid, User) ->
-  gen_server:call(Pid, {remove, User}).
-
-
-read_permissions_file(Pid, Filename) ->
-  gen_server:call(Pid, {read_file, Filename}).
-
-
-load_permissions_file(Pid, Filename) ->
-  gen_server:call(Pid, {load_file, Filename}).
 
 install(Nodes) ->
   ok = mnesia:create_schema(Nodes),
