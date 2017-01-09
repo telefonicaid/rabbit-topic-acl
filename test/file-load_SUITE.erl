@@ -43,9 +43,8 @@ all() -> [add_permission, permissions_by_user, remove_permissions, load_permissi
 init_per_suite(Config) ->
   Priv = ?config(priv_dir, Config),
   application:set_env(mnesia, dir, Priv),
-  aclstore:install([node()]),
-  application:start(mnesia),
-  application:start(aclstore),
+  aclstore_worker:install([node()]),
+  ok = application:start(mnesia),
   Config.
 
 end_per_suite(_Config) ->
@@ -53,49 +52,59 @@ end_per_suite(_Config) ->
   ok.
 
 init_per_testcase(_, Config) ->
-  aclstore:add_permission("janedoe", "root/messages", write),
-  aclstore:add_permission("johndoe", "root/messages", read),
-  Config.
+  {ok, PID} = aclstore_worker:start_link(),
+  aclstore_worker:add_permission(PID, "janedoe", "root/messages", write),
+  aclstore_worker:add_permission(PID, "johndoe", "root/messages", read),
+  [{server, PID} | Config].
 
-end_per_testcase(_, _Config) ->
-  aclstore:remove_permissions("johndoe"),
-  aclstore:remove_permissions("janedoe"),
+end_per_testcase(_, Config) ->
+  PID = ?config(server, Config),
+  aclstore_worker:remove_permissions(PID, "johndoe"),
+  aclstore_worker:remove_permissions(PID, "janedoe"),
   ok.
 
-add_permission(_Config) ->
-  ok = aclstore:add_permission("johndoe", "root/subroot/+", write).
+add_permission(Config) ->
+  PID = ?config(server, Config),
+  ok = aclstore_worker:add_permission(PID, "johndoe", "root/subroot/+", write).
 
-permissions_by_user(_Config) ->
-  [{"root/messages",read}] = aclstore:get_permissions("johndoe").
+permissions_by_user(Config) ->
+  PID = ?config(server, Config),
+  [{"root/messages",read}] = aclstore_worker:get_permissions(PID, "johndoe").
 
-permissions_for_unexistent_user(_Config) ->
-  [] = aclstore:get_permissions("johnunknown").
+permissions_for_unexistent_user(Config) ->
+  PID = ?config(server, Config),
+  [] = aclstore_worker:get_permissions(PID, "johnunknown").
 
-remove_permissions(_Config) ->
-  ok = aclstore:remove_permissions("johndoe"),
-  [] = aclstore:get_permissions("johndoe").
+remove_permissions(Config) ->
+  PID = ?config(server, Config),
+  ok = aclstore_worker:remove_permissions(PID, "johndoe"),
+  [] = aclstore_worker:get_permissions(PID, "johndoe").
 
-remove_unknownuser(_Config) ->
-  ok = aclstore:remove_permissions("unknownuser").
+remove_unknownuser(Config) ->
+  PID = ?config(server, Config),
+  ok = aclstore_worker:remove_permissions(PID, "unknownuser").
 
 load_permissions_file(Config) ->
+  PID = ?config(server, Config),
   DataDir = ?config(data_dir, Config),
   Filename = string:concat(DataDir, "aclfile1"),
   [{"jenniferdoe",read, "root/messages"},
     {"jackdoe",readwrite,"root/subroot/+"},
     {"jackdoe",read,"root/messages"},
-    {global,read,"#"}] = aclstore:read_permissions_file(Filename).
+    {global,read,"#"}] = aclstore_worker:read_permissions_file(PID, Filename).
 
 install_permissions_file(Config) ->
+  PID = ?config(server, Config),
   DataDir = ?config(data_dir, Config),
   Filename = string:concat(DataDir, "aclfile1"),
-  ok = aclstore:load_permissions_file(Filename),
-  [{read, "root/messages"}] = aclstore:get_permissions("jenniferdoe").
+  ok = aclstore_worker:load_permissions_file(PID, Filename),
+  [{read, "root/messages"}] = aclstore_worker:get_permissions(PID, "jenniferdoe").
 
 syntax_error_with_file(Config, Filename) ->
+  PID = ?config(server, Config),
   DataDir = ?config(data_dir, Config),
   Fullname = string:concat(DataDir, Filename),
-  syntax_error = aclstore:load_permissions_file(Fullname).
+  syntax_error = aclstore_worker:load_permissions_file(PID, Fullname).
 
 syntax_error_unexistent_command(Config) ->
   syntax_error_with_file(Config, "aclfile_wrongcommand").
@@ -110,7 +119,8 @@ syntax_error_wrong_permissions(Config) ->
   syntax_error_with_file(Config, "aclfile_wrong_permissions").
 
 missing_permissions_file(Config) ->
+  PID = ?config(server, Config),
   DataDir = ?config(data_dir, Config),
   Filename = string:concat(DataDir, "aclfile_unexistent"),
-  file_not_found = aclstore:load_permissions_file(Filename).
+  file_not_found = aclstore_worker:load_permissions_file(PID, Filename).
 

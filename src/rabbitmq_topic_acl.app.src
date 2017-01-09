@@ -4,5 +4,5 @@
               {registered,[]},
               {applications,[kernel,stdlib,mnesia,rabbit_common, rabbit, amqp_client]},
               {mod,{topicaclplugin,[]}},
-              {env,[{exchange, <<"metronome">>}]},
+              {env,[{exchange, <<"_topicacladmin">>}]},
               {modules,[aclstore,aclstore_sup]}]}.

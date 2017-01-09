@@ -16,11 +16,9 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
   terminate/2, code_change/3]).
 
--export([fire/0]).
-
 -include_lib("amqp_client/include/amqp_client.hrl").
 
--record(state, {channel, exchange}).
+-record(state, {channel, queue, tag, exchange}).
 
 -define(RKFormat,
   "~4.10.0B.~2.10.0B.~2.10.0B.~1.10.0B.~2.10.0B.~2.10.0B.~2.10.0B").
@@ -28,44 +26,58 @@
 start_link() ->
   gen_server:start_link({global, ?MODULE}, ?MODULE, [], []).
 
-%---------------------------
-% Gen Server Implementation
-% --------------------------
-
 init([]) ->
   {ok, Connection} = amqp_connection:start(#amqp_params_direct{}),
   {ok, Channel} = amqp_connection:open_channel(Connection),
   {ok, Exchange} = application:get_env(rabbitmq_topic_acl, exchange),
-  amqp_channel:call(Channel, #'exchange.declare'{exchange = Exchange,
-    type = <<"topic">>,
-    durable = true}),
-  fire(),
-  io:format("~n~n~nStarted worker~n~n~n"),
-  {ok, #state{channel = Channel, exchange = Exchange}}.
+
+  amqp_channel:call(Channel, #'exchange.declare'{
+    exchange = Exchange,
+    durable = true,
+    type = <<"topic">>}
+  ),
+
+  #'queue.declare_ok'{queue = Queue} = amqp_channel:call(Channel, #'queue.declare'{}),
+
+  Binding = #'queue.bind'{
+    queue       = Queue,
+    exchange    = Exchange,
+    routing_key = <<"#">>},
+
+  #'queue.bind_ok'{} = amqp_channel:call(Channel, Binding),
+
+  Sub = #'basic.consume'{queue = Queue},
+  #'basic.consume_ok'{consumer_tag = Tag} = amqp_channel:call(Channel, Sub),
+
+  io:format("Initiated custom plugin with Queue: ~s~n", [Queue]),
+  {ok, #state{channel = Channel, queue = Queue, tag = Tag, exchange = Exchange }}.
 
 handle_call(_Msg, _From, State) ->
+  io:format("Handling generic asynchronous ~n"),
   {reply, unknown_command, State}.
 
-handle_cast(fire, State = #state{channel = Channel, exchange = Exchange}) ->
-  Properties = #'P_basic'{content_type = <<"text/plain">>, delivery_mode = 1},
-  {Date={Year,Month,Day},{Hour, Min,Sec}} = erlang:universaltime(),
-  DayOfWeek = calendar:day_of_the_week(Date),
-  RoutingKey = list_to_binary(
-    io_lib:format(?RKFormat, [Year, Month, Day,
-      DayOfWeek, Hour, Min, Sec])),
-  Message = RoutingKey,
-  BasicPublish = #'basic.publish'{exchange = Exchange,
-    routing_key = RoutingKey},
-  Content = #amqp_msg{props = Properties, payload = Message},
-  io:format("Sending message: ~s~n", [Message]),
-  amqp_channel:call(Channel, BasicPublish, Content),
-  timer:apply_after(1000, ?MODULE, fire, []),
-  {noreply, State};
-
 handle_cast(_, State) ->
+  io:format("Handling generic synchronous message ~n"),
   {noreply,State}.
 
-handle_info(_Info, State) ->
+handle_info({{'basic.deliver', _Queue, _, _, _, <<"add">>}, {'amqp_msg', _, Msg} }, State) ->
+  io:format("Adding new permission: ~s~n~n", [Msg]),
+  {noreply, State};
+
+handle_info({{'basic.deliver', _Queue, _, _, _, <<"save">>}, {'amqp_msg', _, Msg} }, State) ->
+  io:format("Saving permission list: ~s~n~n", [Msg]),
+  {noreply, State};
+
+handle_info({{'basic.deliver', _Queue, _, _, _, <<"refresh">>}, {'amqp_msg', _, Msg} }, State) ->
+  io:format("Refreshing permission list: ~s~n~n", [Msg]),
+  {noreply, State};
+
+handle_info({'basic.consume_ok', _ }, State) ->
+  io:format("Handling consume ACK~n"),
+  {noreply, State};
+
+handle_info({Info, _}, State) ->
+  io:format("Unknown message: ~w~n", [Info]),
   {noreply, State}.
 
 terminate(_, #state{channel = Channel}) ->
@@ -74,9 +86,4 @@ terminate(_, #state{channel = Channel}) ->
 
 code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
-
-%---------------------------
-
-fire() ->
-  gen_server:cast({global, ?MODULE}, fire).
 

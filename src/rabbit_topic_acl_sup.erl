@@ -4,9 +4,9 @@
 %%% @doc
 %%%
 %%% @end
-%%% Created : 05. ene 2017 10:06
+%%% Created : 05. ene 2017 16:38
 %%%-------------------------------------------------------------------
--module(topicaclplugin_sup).
+-module(rabbit_topic_acl_sup).
 -author("dmoranj").
 
 -behaviour(supervisor).
@@ -17,14 +17,19 @@ start_link() ->
   supervisor:start_link({local, ?MODULE}, ?MODULE, _Arg = []).
 
 init([]) ->
-  io:format("~n~nStarted ACL Plugin supervisor~n~n~n"),
+  io:format("~n~nStarted global supervisor~n~n~n"),
 
   {ok, {{one_for_one, 3, 10},
-    [{topicaclplugin_worker,
-      {topicaclplugin_worker, start_link, []},
+    [{aclstore_sup,
+      {aclstore_sup, start_link, []},
       permanent,
       10000,
-      worker,
-      [topicaclplugin_worker]}
+      supervisor,
+      [aclstore_sup]},
+    {topicaclplugin_sup,
+      {topicaclplugin_sup, start_link, []},
+      permanent,
+      10000,
+      supervisor,
+      [topicaclplugin_sup]}
     ]}}.
-

@@ -4,15 +4,9 @@
 %%% @doc
 %%%
 %%% @end
-%%% Created : 05. ene 2017 16:53
+%%% Created : 09. ene 2017 12:17
 %%%-------------------------------------------------------------------
--module(aclstore).
+-module(aclstore_client).
 -author("dmoranj").
 
--export([start/2, stop/1]).
 
-start(normal, []) ->
-  mnesia:wait_for_tables([aclstore_record], 5000),
-  aclstore_sup:start_link().
-
-stop(_) -> ok.

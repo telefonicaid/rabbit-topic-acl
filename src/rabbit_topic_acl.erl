@@ -4,9 +4,9 @@
 %%% @doc
 %%%
 %%% @end
-%%% Created : 05. ene 2017 10:03
+%%% Created : 05. ene 2017 16:46
 %%%-------------------------------------------------------------------
--module(topicaclplugin).
+-module(rabbit_topic_acl).
 -author("dmoranj").
 
 -behaviour(application).
@@ -14,9 +14,8 @@
 -export([start/2, stop/1]).
 
 start(normal, []) ->
-  io:format("~n~n~nStarted plugin~n~n~n"),
-  lager:error("~n~n~nStarted plugin with lager~n~n~n"),
-  topicaclplugin_sup:start_link().
+  rabbit_topic_acl_sup:start_link().
 
 stop(_State) ->
   ok.
+
