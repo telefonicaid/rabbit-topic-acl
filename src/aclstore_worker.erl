@@ -32,6 +32,7 @@
 %% API
 -export([extract_permissions/2, tokenize_line/1, install/1, read_permissions_file/1, load_permissions_file/1]).
 -export([start_link/0, init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
+-export([create_tables/1]).
 
 -record(aclstore_record, {
   user,
@@ -48,6 +49,8 @@ start_link() ->
   gen_server:start_link({global, ?MODULE}, ?MODULE, [], []).
 
 init(_) ->
+  mnesia:start(),
+  create_tables([node()]),
   {ok, #state{status = ok}}.
 
 terminate(_, _) -> ok.
@@ -63,14 +66,22 @@ handle_info(_, State) ->
 code_change(_, State, _) ->
   {ok, State}.
 
-install(Nodes) ->
-  ok = mnesia:create_schema(Nodes),
-  rpc:multicall(Nodes, application, start, [mnesia]),
-  mnesia:create_table(aclstore_record,
+create_tables(Nodes) ->
+  io:format("Creating tables ~n"),
+  case mnesia:create_table(aclstore_record,
     [{attributes, record_info(fields, aclstore_record)},
       {index, [#aclstore_record.topic]},
       {disc_copies, Nodes},
-      {type, bag}]),
+      {type, bag}]) of
+
+    {atomic, ok} -> io:format("Table aclstore successfully created~n");
+    {aborted, Reason} -> io:format("Could not create table ~w ~n", [Reason])
+  end.
+
+install(Nodes) ->
+  ok = mnesia:create_schema(Nodes),
+  rpc:multicall(Nodes, application, start, [mnesia]),
+  create_tables(Nodes),
   rpc:multicall(Nodes, application, stop, [mnesia]).
 
 extract_permissions(Item, {User, Permission_list}) ->
@@ -121,9 +132,14 @@ add_permission(User, Topic, Permission) ->
       permission = Permission
     })
       end,
-  mnesia:activity(transaction, F).
+  case mnesia:activity(transaction, F) of
+    ok -> io:format("Permission added successfully"),
+      ok;
+    Error -> io:format("Unexpected error adding user: ~w~n", [Error])
+  end.
 
 handle_call({add, User, Topic, Permission}, _From, State) ->
+  io:format("Handling add ~n"),
   Result = add_permission(User, Topic, Permission),
   {reply, Result, State};
 
@@ -132,6 +148,13 @@ handle_call({get, User}, _From, State) ->
         Permissions = mnesia:read({aclstore_record, User}),
         [{Topic, Permission} || {aclstore_record, _, Topic, Permission} <- Permissions ]
       end,
+  Result = mnesia:activity(transaction, F),
+  {reply, Result, State};
+
+handle_call({list}, _From, State) ->
+  F = fun() ->
+    mnesia:foldl(fun({_Table, User, Topic, Perm}, NewAcc) -> [{User, Topic, Perm} | NewAcc] end, [], aclstore_record)
+  end,
   Result = mnesia:activity(transaction, F),
   {reply, Result, State};
 
@@ -146,6 +169,10 @@ handle_call({read_file, Filename}, _From, State) ->
 
 handle_call({load_file, Filename}, _From, State) ->
   Result = load_permissions_file(Filename),
-  {reply, Result, State}.
+  {reply, Result, State};
+
+handle_call(_, _, State) ->
+  io:format("Ignoring unknown handle ~n"),
+  {reply, ok, State}.
 
 

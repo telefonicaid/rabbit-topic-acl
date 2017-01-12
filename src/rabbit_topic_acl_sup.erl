@@ -16,7 +16,7 @@
 start_link() ->
   supervisor:start_link({local, ?MODULE}, ?MODULE, _Arg = []).
 
-init([]) ->
+init(Args) ->
   io:format("~n~nStarted global supervisor~n~n~n"),
 
   {ok, {{one_for_one, 3, 10},
@@ -27,7 +27,7 @@ init([]) ->
       supervisor,
       [aclstore_sup]},
     {topicaclplugin_sup,
-      {topicaclplugin_sup, start_link, []},
+      {topicaclplugin_sup, start_link, Args},
       permanent,
       10000,
       supervisor,

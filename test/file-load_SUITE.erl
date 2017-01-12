@@ -34,11 +34,12 @@
 -export([add_permission/1,permissions_by_user/1,remove_permissions/1,load_permissions_file/1,
   install_permissions_file/1, syntax_error_unexistent_command/1, syntax_error_parameter_number/1,
   syntax_error_with_file/2, missing_permissions_file/1, syntax_error_wrong_permissions/1,
-  permissions_for_unexistent_user/1, remove_unknownuser/1]).
+  permissions_for_unexistent_user/1, remove_unknownuser/1, list_permissions/1]).
 
 all() -> [add_permission, permissions_by_user, remove_permissions, load_permissions_file, install_permissions_file,
           syntax_error_unexistent_command, syntax_error_parameter_number, missing_permissions_file,
-          syntax_error_wrong_permissions, permissions_for_unexistent_user, remove_unknownuser].
+          syntax_error_wrong_permissions, permissions_for_unexistent_user, remove_unknownuser,
+          list_permissions].
 
 init_per_suite(Config) ->
   Priv = ?config(priv_dir, Config),
@@ -53,58 +54,52 @@ end_per_suite(_Config) ->
 
 init_per_testcase(_, Config) ->
   {ok, PID} = aclstore_worker:start_link(),
-  aclstore_client:add_permission(PID, "janedoe", "root/messages", write),
-  aclstore_client:add_permission(PID, "johndoe", "root/messages", read),
+  aclstore:add_permission("janedoe", "root/messages", write),
+  aclstore:add_permission("johndoe", "root/messages", read),
   [{server, PID} | Config].
 
-end_per_testcase(_, Config) ->
-  PID = ?config(server, Config),
-  aclstore_client:remove_permissions(PID, "johndoe"),
-  aclstore_client:remove_permissions(PID, "janedoe"),
+end_per_testcase(_, _Config) ->
+  mnesia:clear_table(aclstore_record),
   ok.
 
-add_permission(Config) ->
-  PID = ?config(server, Config),
-  ok = aclstore_client:add_permission(PID, "johndoe", "root/subroot/+", write).
+add_permission(_Config) ->
+  ok = aclstore:add_permission("johndoe", "root/subroot/+", write).
 
-permissions_by_user(Config) ->
-  PID = ?config(server, Config),
-  [{"root/messages",read}] = aclstore_client:get_permissions(PID, "johndoe").
+permissions_by_user(_Config) ->
+  [{"root/messages",read}] = aclstore:get_permissions("johndoe").
 
-permissions_for_unexistent_user(Config) ->
-  PID = ?config(server, Config),
-  [] = aclstore_client:get_permissions(PID, "johnunknown").
+permissions_for_unexistent_user(_Config) ->
+  [] = aclstore:get_permissions("johnunknown").
 
-remove_permissions(Config) ->
-  PID = ?config(server, Config),
-  ok = aclstore_client:remove_permissions(PID, "johndoe"),
-  [] = aclstore_client:get_permissions(PID, "johndoe").
+remove_permissions(_Config) ->
+  ok = aclstore:remove_permissions("johndoe"),
+  [] = aclstore:get_permissions("johndoe").
 
-remove_unknownuser(Config) ->
-  PID = ?config(server, Config),
-  ok = aclstore_client:remove_permissions(PID, "unknownuser").
+remove_unknownuser(_Config) ->
+  ok = aclstore:remove_permissions("unknownuser").
+
+list_permissions(_Config) ->
+  [ {"janedoe", "root/messages", write},
+    {"johndoe", "root/messages", read}] = aclstore:list_permissions().
 
 load_permissions_file(Config) ->
-  PID = ?config(server, Config),
   DataDir = ?config(data_dir, Config),
   Filename = string:concat(DataDir, "aclfile1"),
   [{"jenniferdoe",read, "root/messages"},
     {"jackdoe",readwrite,"root/subroot/+"},
     {"jackdoe",read,"root/messages"},
-    {global,read,"#"}] = aclstore_client:read_permissions_file(PID, Filename).
+    {global,read,"#"}] = aclstore:read_permissions_file(Filename).
 
 install_permissions_file(Config) ->
-  PID = ?config(server, Config),
   DataDir = ?config(data_dir, Config),
   Filename = string:concat(DataDir, "aclfile1"),
-  ok = aclstore_client:load_permissions_file(PID, Filename),
-  [{read, "root/messages"}] = aclstore_client:get_permissions(PID, "jenniferdoe").
+  ok = aclstore:load_permissions_file(Filename),
+  [{read, "root/messages"}] = aclstore:get_permissions("jenniferdoe").
 
 syntax_error_with_file(Config, Filename) ->
-  PID = ?config(server, Config),
   DataDir = ?config(data_dir, Config),
   Fullname = string:concat(DataDir, Filename),
-  syntax_error = aclstore_client:load_permissions_file(PID, Fullname).
+  syntax_error = aclstore:load_permissions_file(Fullname).
 
 syntax_error_unexistent_command(Config) ->
   syntax_error_with_file(Config, "aclfile_wrongcommand").
@@ -119,8 +114,7 @@ syntax_error_wrong_permissions(Config) ->
   syntax_error_with_file(Config, "aclfile_wrong_permissions").
 
 missing_permissions_file(Config) ->
-  PID = ?config(server, Config),
   DataDir = ?config(data_dir, Config),
   Filename = string:concat(DataDir, "aclfile_unexistent"),
-  file_not_found = aclstore_client:load_permissions_file(PID, Filename).
+  file_not_found = aclstore:load_permissions_file(Filename).
 

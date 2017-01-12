@@ -3,6 +3,6 @@
               {vsn,"1.0.0"},
               {registered,[]},
               {applications,[kernel,stdlib,mnesia,rabbit_common, rabbit, amqp_client]},
-              {mod,{topicaclplugin,[]}},
+              {mod,{rabbit_topic_acl,[]}},
               {env,[{exchange, <<"_topicacladmin">>}]},
-              {modules,[aclstore,aclstore_sup]}]}.
+              {modules,[]}]}.

@@ -61,15 +61,19 @@ handle_cast(_, State) ->
   {noreply,State}.
 
 handle_info({{'basic.deliver', _Queue, _, _, _, <<"add">>}, {'amqp_msg', _, Msg} }, State) ->
+  [User, Topic, Permission] = string:tokens(string:strip(binary_to_list(Msg), both, $;), " "),
+  aclstore:add_permission(User, Topic, list_to_atom(Permission)),
   io:format("Adding new permission: ~s~n~n", [Msg]),
   {noreply, State};
 
-handle_info({{'basic.deliver', _Queue, _, _, _, <<"save">>}, {'amqp_msg', _, Msg} }, State) ->
-  io:format("Saving permission list: ~s~n~n", [Msg]),
+handle_info({{'basic.deliver', _Queue, _, _, _, <<"save">>}, {'amqp_msg', _, _Msg} }, State) ->
+  io:format("Saving permission list. ~n"),
   {noreply, State};
 
-handle_info({{'basic.deliver', _Queue, _, _, _, <<"refresh">>}, {'amqp_msg', _, Msg} }, State) ->
-  io:format("Refreshing permission list: ~s~n~n", [Msg]),
+handle_info({{'basic.deliver', _Queue, _, _, _, <<"refresh">>}, {'amqp_msg', _, _Msg} }, State) ->
+  Permissions = aclstore:list_permissions(),
+  Payload = string:join([string:join([User, Topic, atom_to_list(Permission)], " ") || {User, Topic, Permission} <- Permissions], "\n"),
+  io:format("Refreshing permission list:\n\n~s\n", [Payload]),
   {noreply, State};
 
 handle_info({'basic.consume_ok', _ }, State) ->
