@@ -66,6 +66,11 @@ handle_info({{'basic.deliver', _Queue, _, _, _, <<"add">>}, {'amqp_msg', _, Msg}
   io:format("Adding new permission: ~s~n~n", [Msg]),
   {noreply, State};
 
+handle_info({{'basic.deliver', _Queue, _, _, _, <<"clear">>}, {'amqp_msg', _, _Msg} }, State) ->
+  io:format("Removing all permissions from memory. ~n"),
+  aclstore:clear_permissions(),
+  {noreply, State};
+
 handle_info({{'basic.deliver', _Queue, _, _, _, <<"save">>}, {'amqp_msg', _, _Msg} }, State) ->
   io:format("Saving permission list. ~n"),
   {noreply, State};

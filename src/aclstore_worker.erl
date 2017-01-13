@@ -188,6 +188,10 @@ handle_call({list}, _From, State) ->
   Result = list(),
   {reply, Result, State};
 
+handle_call({clear}, _From, State) ->
+  mnesia:clear_table(aclstore_record),
+  {reply, ok, State};
+
 handle_call({remove, User}, _From, State) ->
   F = fun() -> mnesia:delete({aclstore_record, User}) end,
   Result = mnesia:activity(transaction, F),

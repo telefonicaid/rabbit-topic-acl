@@ -34,12 +34,13 @@
 -export([add_permission/1,permissions_by_user/1,remove_permissions/1,load_permissions_file/1,
   install_permissions_file/1, syntax_error_unexistent_command/1, syntax_error_parameter_number/1,
   syntax_error_with_file/3, missing_permissions_file/1, syntax_error_wrong_permissions/1,
-  permissions_for_unexistent_user/1, remove_unknownuser/1, list_permissions/1, save_permissions_file/1]).
+  permissions_for_unexistent_user/1, remove_unknownuser/1, list_permissions/1, save_permissions_file/1,
+  remove_all_permissions/1]).
 
 all() -> [add_permission, permissions_by_user, remove_permissions, load_permissions_file, install_permissions_file,
           syntax_error_unexistent_command, syntax_error_parameter_number, missing_permissions_file,
           syntax_error_wrong_permissions, permissions_for_unexistent_user, remove_unknownuser,
-          list_permissions, save_permissions_file].
+          list_permissions, save_permissions_file, remove_all_permissions].
 
 init_per_suite(Config) ->
   Priv = ?config(priv_dir, Config),
@@ -82,6 +83,10 @@ list_permissions(_Config) ->
   [ {"janedoe", "root/messages", write},
     {"johndoe", "root/messages", read}] = aclstore:list_permissions().
 
+remove_all_permissions(_Config) ->
+  ok = aclstore:clear_permissions(),
+  [] = aclstore:list_permissions().
+
 load_permissions_file(Config) ->
   DataDir = ?config(data_dir, Config),
   Filename = string:concat(DataDir, "aclfile1"),
@@ -96,7 +101,6 @@ save_permissions_file(Config) ->
   aclstore:save_permissions_file(Filename),
   [ {"johndoe", read, "root/messages"},
     {"janedoe", write, "root/messages"}] = aclstore:read_permissions_file(Filename).
-
 
 install_permissions_file(Config) ->
   DataDir = ?config(data_dir, Config),
