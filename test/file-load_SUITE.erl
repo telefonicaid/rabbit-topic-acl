@@ -33,7 +33,7 @@
          init_per_testcase/2, end_per_testcase/2]).
 -export([add_permission/1,permissions_by_user/1,remove_permissions/1,load_permissions_file/1,
   install_permissions_file/1, syntax_error_unexistent_command/1, syntax_error_parameter_number/1,
-  syntax_error_with_file/2, missing_permissions_file/1, syntax_error_wrong_permissions/1,
+  syntax_error_with_file/3, missing_permissions_file/1, syntax_error_wrong_permissions/1,
   permissions_for_unexistent_user/1, remove_unknownuser/1, list_permissions/1, save_permissions_file/1]).
 
 all() -> [add_permission, permissions_by_user, remove_permissions, load_permissions_file, install_permissions_file,
@@ -93,9 +93,9 @@ load_permissions_file(Config) ->
 save_permissions_file(Config) ->
   Privdir = ?config(priv_dir, Config),
   Filename = string:concat(Privdir, "aclfile_saved"),
-  aclstore:save_permissions_file(Filename).
-%%  [ {"janedoe", "root/messages", write},
-%%    {"johndoe", "root/messages", read}] = aclstore:read_permissions_file(Filename).
+  aclstore:save_permissions_file(Filename),
+  [ {"johndoe", read, "root/messages"},
+    {"janedoe", write, "root/messages"}] = aclstore:read_permissions_file(Filename).
 
 
 install_permissions_file(Config) ->
@@ -104,22 +104,22 @@ install_permissions_file(Config) ->
   ok = aclstore:load_permissions_file(Filename),
   [{read, "root/messages"}] = aclstore:get_permissions("jenniferdoe").
 
-syntax_error_with_file(Config, Filename) ->
+syntax_error_with_file(Config, Filename, Error) ->
   DataDir = ?config(data_dir, Config),
   Fullname = string:concat(DataDir, Filename),
-  syntax_error = aclstore:load_permissions_file(Fullname).
+  Error = aclstore:load_permissions_file(Fullname).
 
 syntax_error_unexistent_command(Config) ->
-  syntax_error_with_file(Config, "aclfile_wrongcommand").
+  syntax_error_with_file(Config, "aclfile_wrongcommand", parse_error).
 
 syntax_error_parameter_number(Config) ->
-  syntax_error_with_file(Config, "aclfile_too_many_params_topic"),
-  syntax_error_with_file(Config, "aclfile_too_many_params_user"),
-  syntax_error_with_file(Config, "aclfile_too_few_params_topic"),
-  syntax_error_with_file(Config, "aclfile_too_few_params_user").
+  syntax_error_with_file(Config, "aclfile_too_many_params_topic", syntax_error),
+  syntax_error_with_file(Config, "aclfile_too_many_params_user", syntax_error),
+  syntax_error_with_file(Config, "aclfile_too_few_params_topic", syntax_error),
+  syntax_error_with_file(Config, "aclfile_too_few_params_user", syntax_error).
 
 syntax_error_wrong_permissions(Config) ->
-  syntax_error_with_file(Config, "aclfile_wrong_permissions").
+  syntax_error_with_file(Config, "aclfile_wrong_permissions", syntax_error).
 
 missing_permissions_file(Config) ->
   DataDir = ?config(data_dir, Config),

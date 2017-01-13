@@ -99,7 +99,7 @@ tokenize_line(Line) ->
   case hd(Tokenized) of
     "topic"  -> {topic, tl(Tokenized)};
     "user" -> {user, tl(Tokenized)};
-    _ -> throw(syntax_error)
+    _ -> throw(parse_error)
   end.
 
 read_permissions_file(Filename) ->
@@ -109,7 +109,7 @@ read_permissions_file(Filename) ->
           end,
   Contents = binary_to_list(IFile),
   Tokenized = string:tokens(Contents, "\n"),
-  Filtered = [X || X <- Tokenized, hd(X) =/= $#],
+  Filtered = [X || X <- Tokenized, hd(X) =/= $#, string:strip(X) =/= ""],
   Tokens = lists:map(fun tokenize_line/1, Filtered),
   {_, Permissions} = lists:foldl(fun extract_permissions/2, {global, []}, Tokens),
   Permissions.
@@ -131,8 +131,8 @@ to_text_format(Permissions) ->
   Serializer = fun(Key, Value, Acc) ->
     string:join([
       Acc,
-      string:join("user ", Key, " "),
-      string:join(["topic" |Value], " "),
+      "user " ++ Key,
+      string:join(["topic " ++  atom_to_list(Perm) ++ " " ++ Top || {Top, Perm} <- Value], "\n"),
       ""
     ], "\n")
     end,
@@ -152,6 +152,7 @@ load_permissions_file(Filename) ->
   of
     _ -> ok
   catch
+    throw:parse_error -> parse_error;
     throw:syntax_error -> syntax_error;
     throw:file_not_found -> file_not_found
   end.
