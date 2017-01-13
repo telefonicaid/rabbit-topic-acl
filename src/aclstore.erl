@@ -1,118 +1,44 @@
 %%%-------------------------------------------------------------------
-%%% @author dmj
-%%% @copyright (C) 2016, Telefonica Investigación y Desarrollo, S.A.U
+%%% @author dmoranj
+%%% @copyright (C) 2017, <COMPANY>
 %%% @doc
 %%%
-%%% This file is part of RabbitMQ ACL Topic plugin.
-%%%
-%%% RabbitMQ ACL Topic plugin is free software: you can redistribute it and/or
-%%% modify it under the terms of the GNU Affero General Public License as
-%%% published by the Free Software Foundation, either version 3 of the License,
-%%% or (at your option) any later version.
-%%%
-%%% RabbitMQ ACL Topic plugin is distributed in the hope that it will be useful,
-%%% but WITHOUT ANY WARRANTY; without even the implied warranty of
-%%% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-%%% See the GNU Affero General Public License for more details.
-%%%
-%%% You should have received a copy of the GNU Affero General Public
-%%% License along with RabbitMQ ACL Topic plugin.
-%%% If not, see http://www.gnu.org/licenses/.
-%%%
-%%% For those usages not covered by the GNU Affero General Public License
-%%% please contact with::iot_support@tid.es
-%%%
 %%% @end
-%%% Created : 28. dic 2016 17:36
+%%% Created : 05. ene 2017 16:53
 %%%-------------------------------------------------------------------
 -module(aclstore).
--behaviour(application).
--author("dmj").
+-author("dmoranj").
 
-%% API
--export([start/2, stop/1, install/1]).
--export([add_permission/3, get_permissions/1, remove_permissions/1, read_permissions_file/1]).
--export([extract_permissions/2, tokenize_line/1, load_permissions_file/1]).
+-export([start/2, stop/1]).
 
--record(aclstore_record, {
-  user,
-  topic,
-  permission
-}).
+-export([add_permission/3, get_permissions/1, remove_permissions/1, read_permissions_file/1, load_permissions_file/1]).
+-export([list_permissions/0, save_permissions_file/1, clear_permissions/0]).
 
 start(normal, []) ->
-  mnesia:wait_for_tables([aclstore_record], 5000),
-  aclstore_sup:start_link().
+  ok.
 
 stop(_) -> ok.
 
-install(Nodes) ->
-  ok = mnesia:create_schema(Nodes),
-  rpc:multicall(Nodes, application, start, [mnesia]),
-  mnesia:create_table(aclstore_record,
-    [{attributes, record_info(fields, aclstore_record)},
-      {index, [#aclstore_record.topic]},
-      {disc_copies, Nodes},
-      {type, bag}]),
-  rpc:multicall(Nodes, application, stop, [mnesia]).
-
 add_permission(User, Topic, Permission) ->
-  F = fun() ->
-      mnesia:write(#aclstore_record{
-        user= User,
-        topic = Topic,
-        permission = Permission
-      })
-      end,
-  mnesia:activity(transaction, F).
+  gen_server:call({global, aclstore_worker}, {add, User, Topic, Permission}).
 
 get_permissions(User) ->
-  F = fun() ->
-        Permissions = mnesia:read({aclstore_record, User}),
-        [{Topic, Permission} || {aclstore_record, _, Topic, Permission} <- Permissions ]
-      end,
-  mnesia:activity(transaction, F).
+  gen_server:call({global, aclstore_worker}, {get, User}).
+
+list_permissions() ->
+  gen_server:call({global, aclstore_worker}, {list}).
 
 remove_permissions(User) ->
-  F = fun() -> mnesia:delete({aclstore_record, User}) end,
-  mnesia:activity(transaction, F).
+  gen_server:call({global, aclstore_worker}, {remove, User}).
 
-extract_permissions(Item, {User, Permission_list}) ->
-  case Item of
-    {topic, [Permission, Topic]} when Permission =:= "read"; Permission =:= "readwrite"; Permission =:= "write"  ->
-      {User, [{User, list_to_atom(Permission), Topic}|Permission_list]};
-
-    {user, [Name]} -> {Name, Permission_list};
-    _ -> throw(syntax_error)
-  end.
-
-tokenize_line(Line) ->
-  Tokenized = string:tokens(Line, " "),
-  case hd(Tokenized) of
-    "topic"  -> {topic, tl(Tokenized)};
-    "user" -> {user, tl(Tokenized)};
-    _ -> throw(syntax_error)
-  end.
+clear_permissions() ->
+  gen_server: call({global, aclstore_worker}, {clear}).
 
 read_permissions_file(Filename) ->
-   IFile = case file:read_file(Filename) of
-             {ok, IFileObj} -> IFileObj;
-             {error, enoent} -> throw(file_not_found)
-   end,
-   Contents = binary_to_list(IFile),
-   Tokenized = string:tokens(Contents, "\n"),
-   Filtered = [X || X <- Tokenized, hd(X) =/= $#],
-   Tokens = lists:map(fun tokenize_line/1, Filtered),
-   {_, Permissions} = lists:foldl(fun extract_permissions/2, {global, []}, Tokens),
-   Permissions.
+  gen_server:call({global, aclstore_worker}, {read_file, Filename}).
 
 load_permissions_file(Filename) ->
-  try
-    Permissions = read_permissions_file(Filename),
-    [add_permission(User, Permission, Topic) || {User, Permission, Topic} <- Permissions]
-  of
-    _ -> ok
-  catch
-    throw:syntax_error -> syntax_error;
-    throw:file_not_found -> file_not_found
-  end.
+  gen_server:call({global, aclstore_worker}, {load_file, Filename}).
+
+save_permissions_file(Filename) ->
+  gen_server:call({global, aclstore_worker}, {save_file, Filename}).

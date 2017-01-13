@@ -36,5 +36,14 @@ start_link() ->
   supervisor:start_link(?MODULE, []).
 
 init([]) ->
-  {ok, {{one_for_one, 1, 1}, []}}.
+  io:format("~n~nStarted ACL Store supervisor~n"),
+
+  {ok, {{one_for_one, 3, 10},
+    [{aclstore_worker,
+      {aclstore_worker, start_link, []},
+      permanent,
+      10000,
+      worker,
+      [aclstore_worker]}
+    ]}}.
 
