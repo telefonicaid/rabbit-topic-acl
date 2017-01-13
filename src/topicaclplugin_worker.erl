@@ -72,7 +72,7 @@ handle_info({{'basic.deliver', _Queue, _, _, _, <<"save">>}, {'amqp_msg', _, _Ms
 
 handle_info({{'basic.deliver', _Queue, _, _, _, <<"refresh">>}, {'amqp_msg', _, _Msg} }, State) ->
   Permissions = aclstore:list_permissions(),
-  Payload = string:join([string:join([User, Topic, atom_to_list(Permission)], " ") || {User, Topic, Permission} <- Permissions], "\n"),
+  Payload = aclstore_worker:to_text_format(Permissions),
   io:format("Refreshing permission list:\n\n~s\n", [Payload]),
   {noreply, State};
 

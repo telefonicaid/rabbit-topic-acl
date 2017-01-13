@@ -12,7 +12,7 @@
 -export([start/2, stop/1]).
 
 -export([add_permission/3, get_permissions/1, remove_permissions/1, read_permissions_file/1, load_permissions_file/1]).
--export([list_permissions/0]).
+-export([list_permissions/0, save_permissions_file/1]).
 
 start(normal, []) ->
   ok.
@@ -36,3 +36,6 @@ read_permissions_file(Filename) ->
 
 load_permissions_file(Filename) ->
   gen_server:call({global, aclstore_worker}, {load_file, Filename}).
+
+save_permissions_file(Filename) ->
+  gen_server:call({global, aclstore_worker}, {save_file, Filename}).

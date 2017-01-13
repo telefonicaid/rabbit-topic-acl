@@ -32,6 +32,7 @@
 %% API
 -export([extract_permissions/2, tokenize_line/1, install/1, read_permissions_file/1, load_permissions_file/1]).
 -export([start_link/0, init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
+-export([list/0, to_text_format/1]).
 -export([create_tables/1]).
 
 -record(aclstore_record, {
@@ -113,6 +114,37 @@ read_permissions_file(Filename) ->
   {_, Permissions} = lists:foldl(fun extract_permissions/2, {global, []}, Tokens),
   Permissions.
 
+list() ->
+  F = fun() ->
+    mnesia:foldl(fun({_Table, User, Topic, Perm}, NewAcc) -> [{User, Topic, Perm} | NewAcc] end, [], aclstore_record)
+      end,
+  mnesia:activity(transaction, F).
+
+to_text_format(Permissions) ->
+  Extractor = fun({User, Topic, Permission}, Dict) ->
+    case dict:find(User, Dict) of
+      {ok, List} -> dict:store(User, [{Topic, Permission} | List], Dict);
+      _ -> dict:store(User, [{Topic, Permission}], Dict)
+    end
+    end,
+
+  Serializer = fun(Key, Value, Acc) ->
+    string:join([
+      Acc,
+      string:join("user ", Key, " "),
+      string:join(["topic" |Value], " "),
+      ""
+    ], "\n")
+    end,
+
+  Users_dict = lists:foldl(Extractor, dict:new(), Permissions),
+  dict:fold(Serializer, "", Users_dict).
+
+save_permissions_file(Filename) ->
+  Permissions = to_text_format(list()),
+
+  file:write_file(Filename, Permissions).
+
 load_permissions_file(Filename) ->
   try
     Permissions = read_permissions_file(Filename),
@@ -152,10 +184,7 @@ handle_call({get, User}, _From, State) ->
   {reply, Result, State};
 
 handle_call({list}, _From, State) ->
-  F = fun() ->
-    mnesia:foldl(fun({_Table, User, Topic, Perm}, NewAcc) -> [{User, Topic, Perm} | NewAcc] end, [], aclstore_record)
-  end,
-  Result = mnesia:activity(transaction, F),
+  Result = list(),
   {reply, Result, State};
 
 handle_call({remove, User}, _From, State) ->
@@ -165,6 +194,10 @@ handle_call({remove, User}, _From, State) ->
 
 handle_call({read_file, Filename}, _From, State) ->
   Result = read_permissions_file(Filename),
+  {reply, Result, State};
+
+handle_call({save_file, Filename}, _From, State) ->
+  Result = save_permissions_file(Filename),
   {reply, Result, State};
 
 handle_call({load_file, Filename}, _From, State) ->
