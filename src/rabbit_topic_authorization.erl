@@ -1,19 +1,30 @@
-%% The contents of this file are subject to the Mozilla Public License
-%% Version 1.1 (the "License"); you may not use this file except in
-%% compliance with the License. You may obtain a copy of the License
-%% at http://www.mozilla.org/MPL/
-%%
-%% Software distributed under the License is distributed on an "AS IS"
-%% basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See
-%% the License for the specific language governing rights and
-%% limitations under the License.
-%%
-%% The Original Code is RabbitMQ Topic Authorization.
-%%
-%% The Initial Developer of the Original Code is Antoine Galataud for Airboxlab S.A.
-%% Copyright (c) 2015 Airboxlab S.A. All rights reserved.
-%%
-
+%%%-------------------------------------------------------------------
+%%% @author dmj
+%%% @copyright (C) 2016, Telefonica Investigación y Desarrollo, S.A.U
+%%% @doc
+%%%
+%%% This file is part of RabitMQ ACL Topic plugin.
+%%%
+%%% RabbitMQ ACL Topic plugin is free software: you can redistribute it and/or
+%%% modify it under the terms of the GNU Affero General Public License as
+%%% published by the Free Software Foundation, either version 3 of the License,
+%%% or (at your option) any later version.
+%%%
+%%% RabbitMQ ACL Topic plugin is distributed in the hope that it will be useful,
+%%% but WITHOUT ANY WARRANTY; without even the implied warranty of
+%%% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+%%% See the GNU Affero General Public License for more details.
+%%%
+%%% You should have received a copy of the GNU Affero General Public
+%%% License along with RabbitMQ ACL Topic plugin.
+%%% If not, see http://www.gnu.org/licenses/.
+%%%
+%%% For those usages not covered by the GNU Affero General Public License
+%%% please contact with::iot_support@tid.es
+%%%
+%%% @end
+%%% Created : 28. dic 2016 17:36
+%%%-------------------------------------------------------------------
 -module(rabbit_topic_authorization).
 
 -include_lib("rabbit_common/include/rabbit.hrl").
