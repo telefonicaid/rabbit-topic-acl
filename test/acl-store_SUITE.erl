@@ -25,7 +25,7 @@
 %%% @end
 %%% Created : 28. dic 2016 17:36
 %%%-------------------------------------------------------------------
--module('file-load_SUITE').
+-module('acl-store_SUITE').
 -author("dmj").
 
 -include_lib("common_test/include/ct.hrl").
