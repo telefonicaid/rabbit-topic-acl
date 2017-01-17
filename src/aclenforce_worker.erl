@@ -52,18 +52,26 @@ handle_info(_, State) ->
 code_change(_, State, _) ->
   {ok, State}.
 
-match_with_topic(_Permissions, _Topic) ->
-  read.
+match_with_topic(Permissions, Topic) ->
+  Authorizations = [Permission || {Topic_pattern, Permission} <- Permissions, topic_utils:match(Topic, Topic_pattern)],
+  io:format("Authorizations:\n~w\n\n", [Authorizations]),
+  io:format("Permissions:\n~w\n\n", [Permissions]),
+  case sets:size(sets:from_list(Authorizations)) of
+    0 -> none;
+    1 -> hd(Authorizations);
+    _ -> readwrite
+  end.
 
 is_accepted(Permission, Matched) ->
   case {Permission, Matched} of
-    {readwrite, _} -> true;
+    {_, readwrite} -> true;
     {read, read} -> true;
     {write, write} -> true;
     _ -> false
   end.
 
 handle_call({authorize, User, Topic, Permission}, _From, State) ->
+  io:format("Authorizing User [~s] for topic [~s] and permissions [~w]\n", [User, Topic, Permission]),
   Permissions = aclstore:get_permissions(User),
   Matched = match_with_topic(Permissions, Topic),
 

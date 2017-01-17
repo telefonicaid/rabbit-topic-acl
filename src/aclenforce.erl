@@ -10,6 +10,8 @@
 -author("dmoranj").
 
 %% API
--export([]).
+-export([authorize/3]).
 
 
+authorize(User, Topic, Permission) ->
+  gen_server:call({global, aclenforce_worker}, {authorize, User, Topic, Permission}).
