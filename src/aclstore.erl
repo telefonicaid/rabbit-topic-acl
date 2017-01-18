@@ -38,8 +38,8 @@ start(normal, []) ->
 
 stop(_) -> ok.
 
-add_permission(User, Topic, Permission) ->
-  gen_server:call({global, aclstore_worker}, {add, User, Topic, Permission}).
+add_permission(User, Permission, Topic) ->
+  gen_server:call({global, aclstore_worker}, {add, User, Permission, Topic}).
 
 get_permissions(User) ->
   gen_server:call({global, aclstore_worker}, {get, User}).

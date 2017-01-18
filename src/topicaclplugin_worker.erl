@@ -83,8 +83,8 @@ handle_cast(_, State) ->
   {noreply,State}.
 
 handle_info({{'basic.deliver', _Queue, _, _, _, <<"add">>}, {'amqp_msg', _, Msg} }, State) ->
-  [User, Topic, Permission] = string:tokens(string:strip(binary_to_list(Msg), both, $;), " "),
-  aclstore:add_permission(User, Topic, list_to_atom(Permission)),
+  [User, Permission, Topic] = string:tokens(string:strip(binary_to_list(Msg), both, $;), " "),
+  aclstore:add_permission(User, list_to_atom(Permission), Topic),
   io:format("Adding new permission: ~s~n~n", [Msg]),
   {noreply, State};
 

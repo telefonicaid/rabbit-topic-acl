@@ -37,8 +37,8 @@
 
 -record(aclstore_record, {
   user,
-  topic,
-  permission
+  permission,
+  topic
 }).
 
 -record(state, {
@@ -88,7 +88,7 @@ install(Nodes) ->
 extract_permissions(Item, {User, Permission_list}) ->
   case Item of
     {topic, [Permission, Topic]} when Permission =:= "read"; Permission =:= "readwrite"; Permission =:= "write"  ->
-      {User, [{User, list_to_atom(Permission), Topic}|Permission_list]};
+      {User, [{User, Topic, list_to_atom(Permission)}|Permission_list]};
 
     {user, [Name]} -> {Name, Permission_list};
     _ -> throw(syntax_error)
@@ -116,15 +116,15 @@ read_permissions_file(Filename) ->
 
 list() ->
   F = fun() ->
-    mnesia:foldl(fun({_Table, User, Topic, Perm}, NewAcc) -> [{User, Topic, Perm} | NewAcc] end, [], aclstore_record)
+    mnesia:foldl(fun({_Table, User, Perm, Topic}, NewAcc) -> [{User, Perm, Topic} | NewAcc] end, [], aclstore_record)
       end,
   mnesia:activity(transaction, F).
 
 to_text_format(Permissions) ->
-  Extractor = fun({User, Topic, Permission}, Dict) ->
+  Extractor = fun({User, Permission, Topic}, Dict) ->
     case dict:find(User, Dict) of
-      {ok, List} -> dict:store(User, [{Topic, Permission} | List], Dict);
-      _ -> dict:store(User, [{Topic, Permission}], Dict)
+      {ok, List} -> dict:store(User, [{Permission, Topic} | List], Dict);
+      _ -> dict:store(User, [{Permission, Topic}], Dict)
     end
     end,
 
@@ -148,7 +148,7 @@ save_permissions_file(Filename) ->
 load_permissions_file(Filename) ->
   try
     Permissions = read_permissions_file(Filename),
-    [add_permission(User, Topic, Permission) || {User, Permission, Topic} <- Permissions]
+    [add_permission(User, Permission, Topic) || {User, Permission, Topic} <- Permissions]
   of
     _ -> ok
   catch
@@ -157,7 +157,7 @@ load_permissions_file(Filename) ->
     throw:file_not_found -> file_not_found
   end.
 
-add_permission(User, Topic, Permission) ->
+add_permission(User, Permission, Topic) ->
   F = fun() ->
     mnesia:write(#aclstore_record{
       user= User,
@@ -171,15 +171,15 @@ add_permission(User, Topic, Permission) ->
     Error -> io:format("Unexpected error adding user: ~w~n", [Error])
   end.
 
-handle_call({add, User, Topic, Permission}, _From, State) ->
+handle_call({add, User, Permission, Topic}, _From, State) ->
   io:format("Handling add ~n"),
-  Result = add_permission(User, Topic, Permission),
+  Result = add_permission(User, Permission, Topic),
   {reply, Result, State};
 
 handle_call({get, User}, _From, State) ->
   F = fun() ->
         Permissions = mnesia:read({aclstore_record, User}),
-        [{Topic, Permission} || {aclstore_record, _, Topic, Permission} <- Permissions ]
+        [{Permission, Topic} || {aclstore_record, _, Permission, Topic} <- Permissions ]
       end,
   Result = mnesia:activity(transaction, F),
   {reply, Result, State};
