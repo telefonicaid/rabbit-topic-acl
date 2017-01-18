@@ -227,7 +227,7 @@ If, after applying both the user specific and the global permissions no permissi
 The ACL Store has been developed as a OTP generic server. To ease the use of the server, a set of functions was added to
 the `aclstore` module.
 
-###### add_permission(User, Topic, Permission)
+###### add_permission(User, Permission, Topic)
 
 Adds a new permission to the ACL list, for the given User, and topic pattern.
 
@@ -280,7 +280,7 @@ The following table shows the current allowed administration commands and their 
 
 | Command             | Parameters                          | Description                                              |
 | ------------------- |:----------------------------------- |:-------------------------------------------------------- |
-| add                 | <user> <topic> <permission>         | Adds a new ACL entry with the given parameters           |
+| add                 | <user> <permission> <topic>         | Adds a new ACL entry with the given parameters           |
 | clear               |                                     | Remove all the ACL contents from the DB.                 |
 | save                | filename                            | Saves the contents of the ACL to the given file.         |
 | refresh             |                                     | Sends the current ACL content to the notifications topic |
