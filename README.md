@@ -141,8 +141,7 @@ routing key. If we publish a events message with the editor user, we should find
 ## <a name="development"/> Development
 ### Overview
 
-
-### Internal architecture
+### <a name="architecture"/> Internal architecture
 The functionality can be coarsely divided into three groups:
 
 - ACL Database plugin: this section groups all the modules related to ACL loading and management.
@@ -298,12 +297,30 @@ further information.
 
 #### ACL Enforcing modules
 
+The `aclenforce` OTP generic server encapsulates the authorizing logic of the plugin. It exposes a single method, expose
+in the `aclenforce:authorize(User, Topic, Permission)` function for convenience. This function reads the ACL entries for
+the user from the DB, looking for the list of permissions the user have for the selected topic. If the list of permissions
+contain the permission passed as a parameter to the `authorize/3` function, the access is granted. The access is denied
+otherwise.
 
 #### Authorization plugin
 
-Sections
+The authorization plugin itself is implemented as a RabbitMQ Interceptor Module. Two events are intercepted: `basic.publish`
+(emitted whenever a client publishes a message to an exchange) and `queue.bind` (emitted whenever a client tries to bind
+to a queue). Those handlers make use of the  internal function `authorize/5`, that makes use of the ACL Enforcing modules
+to determine whether it should accept the operation or not. In case the operation is not accepted, a protocol error is
+risen.
 
-Supervisor tree
+In order to ease the administration tasks, the plugin allows a special administrator user, that can bypass all the
+authorization mechanisms (defaults to "guest").
+
+#### Supervisor tree
+
+The following image shows the supervisor tree of the plugin application.
+
+
+As it can be seen in the image, there are three generic servers in place, each one with its own supervisor. All the
+supervisores are handled, in time, by a global application supervisor.
 
 
 ### <a name="build"/>  Build
@@ -322,4 +339,18 @@ any building task, so `make all` should be executed before to ensure the plugin 
 
 
 ### <a name="test"/> Test
+
+All the tests for the RabbitMQ Topic ACL Authorization plugin are developed with Common Tests and stored under the
+`/test` folder. For each test suite requiring data files, the corresponding data folder under the tests folder was
+created.
+
+In order to execute the tests, use the following command:
+
+```
+make tests
+```
+
+The execution of the tests generate a `logs/` folder under the root folder, containing logs of the execution of all suites
+as well as a web version of the execution reports.
+
 
