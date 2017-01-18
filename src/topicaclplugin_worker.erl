@@ -46,7 +46,10 @@ start_link() ->
   gen_server:start_link({global, ?MODULE}, ?MODULE, [], []).
 
 init([]) ->
-  {ok, Connection} = amqp_connection:start(#amqp_params_direct{}),
+  {ok, Connection} = amqp_connection:start(#amqp_params_direct{
+    username = <<"guest">>,
+    password = <<"guest">>
+  }),
   {ok, Channel} = amqp_connection:open_channel(Connection),
   {ok, Exchange} = application:get_env(rabbitmq_topic_acl, exchange),
 

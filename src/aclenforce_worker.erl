@@ -54,8 +54,6 @@ code_change(_, State, _) ->
 
 match_with_topic(Permissions, Topic) ->
   Authorizations = [Permission || {Topic_pattern, Permission} <- Permissions, topic_utils:match(Topic, Topic_pattern)],
-  io:format("Authorizations:\n~w\n\n", [Authorizations]),
-  io:format("Permissions:\n~w\n\n", [Permissions]),
   case sets:size(sets:from_list(Authorizations)) of
     0 -> none;
     1 -> hd(Authorizations);

@@ -40,7 +40,7 @@ init([]) ->
 
   {ok, {{one_for_one, 3, 10},
     [{aclenforce_worker,
-      {aclstore_worker, start_link, []},
+      {aclenforce_worker, start_link, []},
       permanent,
       10000,
       worker,

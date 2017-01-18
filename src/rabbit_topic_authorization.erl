@@ -32,12 +32,15 @@
 
 -behaviour(rabbit_channel_interceptor).
 
--export([description/0, intercept/3, applies_to/0, init/1]).
+-export([description/0, intercept/3, applies_to/0, init/1, authorize/5]).
 
 -record(state, {
     user,
-    vhost
+    vhost,
+    administrator
 }).
+
+-import(rabbit_misc, [r/3, format/2, protocol_error/3]).
 
 -rabbit_boot_step({?MODULE,
                    [{description, "topic-based authorization"},
@@ -52,20 +55,29 @@
 
 
 init(Ch) ->
-    #state{user=rabbit_channel:get_user(Ch), vhost=rabbit_channel:get_vhost(Ch)}.
+    #state{user=rabbit_channel:get_user(Ch), vhost=rabbit_channel:get_vhost(Ch), administrator = <<"guest">>}.
 
 description() ->
     [{description,
       <<"Checks authorization based on routing keys">>}].
 
+authorize(Username, RoutingKeyBin, Method, Content, Permission) ->
+  Data = [Permission, Username, RoutingKeyBin],
+  io:format("Intercepting: Permission [~w] User [~s] Routing [~s]\n", Data),
+  case aclenforce:authorize(binary_to_list(Username), binary_to_list(RoutingKeyBin), Permission) of
+    true ->
+      io:format("Accepted\n"),
+      {Method, Content};
+    _ ->
+      io:format("Rejected\n"),
+      protocol_error(authentication_failure, "Rejected action [~w] for user [~s] over topic [~s]", Data)
+  end.
+
 intercept(#'basic.publish'{routing_key = RoutingKeyBin} = Method,
           Content, 
           _State = #state{user = {_, Username, _, _}, vhost = _VHost}) ->
 
-  Permissions = aclstore:get_permissions(binary_to_list(Username)),
-  io:format("Intercepting basic.publish:\n\nContent: ~w\n User: ~s\n Routing: ~s\n", [Content, Username, RoutingKeyBin]),
-  io:format("\nPermissions:\n\n~w\n", [Permissions]),
-  {Method, Content};
+  authorize(Username, RoutingKeyBin, Method, Content, write);
 
 intercept(#'exchange.bind'{routing_key = _RoutingKeyBin} = Method,
           Content, 
@@ -81,12 +93,15 @@ intercept(#'exchange.unbind'{routing_key = _RoutingKeyBin} = Method,
 	  io:format("Intercepting exchange.unbind\n"),
 	  {Method, Content};
 
-intercept(#'queue.bind'{routing_key = _RoutingKeyBin} = Method,
+intercept(#'queue.bind'{routing_key = RoutingKeyBin} = Method,
           Content, 
-          _State = #state{user = _User, vhost = _VHost}) ->
+          _State = #state{user = {_, Username, _, _}, vhost = _VHost, administrator=Admin}) ->
 	  
-	  io:format("Intercepting queue.bind\n"),
-	  {Method, Content};
+	io:format("Intercepting queue.bind\n"),
+  if
+    Username =/= Admin -> authorize(Username, RoutingKeyBin, Method, Content, read);
+    true -> {Method, Content}
+  end;
 
 intercept(#'queue.unbind'{routing_key = _RoutingKeyBin} = Method,
           Content, 
