@@ -90,23 +90,23 @@ remove_all_permissions(_Config) ->
 load_permissions_file(Config) ->
   DataDir = ?config(data_dir, Config),
   Filename = string:concat(DataDir, "aclfile1"),
-  [{"jenniferdoe",read, "root/messages"},
-    {"jackdoe",readwrite,"root/subroot/+"},
-    {"jackdoe",read,"root/messages"},
-    {global,read,"#"}] = aclstore:read_permissions_file(Filename).
+  [{"jenniferdoe", "root/messages", read},
+    {"jackdoe","root/subroot/+", readwrite},
+    {"jackdoe","root/messages", read},
+    {global,"#", read}] = aclstore:read_permissions_file(Filename).
 
 save_permissions_file(Config) ->
   Privdir = ?config(priv_dir, Config),
   Filename = string:concat(Privdir, "aclfile_saved"),
   aclstore:save_permissions_file(Filename),
-  [ {"johndoe", read, "root/messages"},
-    {"janedoe", write, "root/messages"}] = aclstore:read_permissions_file(Filename).
+  [ {"johndoe", "root/messages", read},
+    {"janedoe", "root/messages", write}] = aclstore:read_permissions_file(Filename).
 
 install_permissions_file(Config) ->
   DataDir = ?config(data_dir, Config),
   Filename = string:concat(DataDir, "aclfile1"),
   ok = aclstore:load_permissions_file(Filename),
-  [{read, "root/messages"}] = aclstore:get_permissions("jenniferdoe").
+  [{"root/messages", read}] = aclstore:get_permissions("jenniferdoe").
 
 syntax_error_with_file(Config, Filename, Error) ->
   DataDir = ?config(data_dir, Config),

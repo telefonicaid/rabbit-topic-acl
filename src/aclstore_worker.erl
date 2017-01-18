@@ -148,7 +148,7 @@ save_permissions_file(Filename) ->
 load_permissions_file(Filename) ->
   try
     Permissions = read_permissions_file(Filename),
-    [add_permission(User, Permission, Topic) || {User, Permission, Topic} <- Permissions]
+    [add_permission(User, Topic, Permission) || {User, Permission, Topic} <- Permissions]
   of
     _ -> ok
   catch

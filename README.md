@@ -4,7 +4,13 @@
 
 * [Overview](#overview)
 * [Usage](#usage)
+  * [Deployment](#deployment)
+  * [Administration](#administration)
+  * [Examples of use](#examples)
 * [Development](#development)
+  * [Internal Architecture](#architecture)
+  * [Build](#build)
+  * [Test](#test)
 
 ## <a name="overview"/> Overview
 ### Description
@@ -16,8 +22,121 @@ Permissions for each routing key will be defined in Access Control Lists (ACLs) 
 for Mosquitto ACLs.
 
 ## <a name="usage"/> Usage
-### Deployment
+### <a name="deployment"/> Deployment
 
+In order to deploy the plugin:
+- Build the packages for distribution with `make dist`.
+- Move the generated `plugins/rabbitmq_topic_acl-<version>.ez`
+- Enable the plugins with the `rabbitmq-plugins` administration command.
+
+Take into account that once the plugin is enabled, it will enforce the authorization rules for all the RabbitMQ transactions.
+
+### <a name="administration"/> Administration
+
+Before starting to use the plugin, an ACL must be loaded in the database. For all the administrative actions, the
+RabbitMQ broker must be running with the plugin installed and enabled.
+
+There are two ways of managing the ACL DB contents:
+- Through the use of [ERL commands](#aclstore_commands) from the RabbitMQ Erlang console.
+- Through the use of the [AMQP Administration API](#amqp_administration).
+
+### <a name="examples"/> Examples of use
+
+Once the plugin is deployed and configured, and the ACL established, the plugin will start enforcing the authorizations.
+The `/docs` folder contains a series of examples of use that can be used to illustrate the behavior of the RabbitMQ broker
+with the activated plugin.
+
+Some examples make use of the [RabbitMQ ACL Tool](https://github.com/dmoranj/rabbit-acl-tool) commands for testing
+purposes. Check the documentation in the repository for further information.
+
+#### Example 1
+
+This example shows the basic behavior of the plugins for a very simple scenario: a news feed for a newspaper. The news
+feed has two kinds of topics:
+
+* `news/categories/<category>`: news channels for the different news categories offered by the newspaper. Journalists publish and
+read from this resource and the general audience subscribes to the messages.
+* `news/events`: private channel for the newspaper where the editor publishes events that must be covered by the journalists.
+ The editor publish to this resource and the journalists read from it.
+
+All the messages will be published to the `newsfeed` exchange.
+
+All the files for this example can be found in the `/docs/example1` folder.
+
+In order to setup the initial scenario, the RabbitMQ users must be created in the broker. Go to the `bin/` folder of
+your RabbitMQ instance and execute the `setupTest.sh` script. This script will create three users, on for each role in
+our example app: journalist, audience and editor. It also gives permissions for accessing all kind of entities in the
+default VHost. Take into account that this permissions are used at a different level than the routing key permissions
+offered by the plugin: this plugin does not override default RabbitMQ security, it adds a new level of security that
+takes into account not only RabbitMQ resources, but also routing keys.
+
+Once the users have been created in the broker, it's time to load the ACL file. There is an example ACL file called
+`newsacl` in the `/docs/example1` folder, with the permissions described in the problem description.
+
+The file can be loaded using the RabbitMQ Erlang console. If you are testing the plugin using the `make run-broker`
+build task, show the Erlang console by pressing Enter. If you are using a standalone RabbitMQ, you can issue Erlang
+commands to the server through the `rabbitmqctl eval <expression>` command. In the following, we will use the latter
+method (in order to use the former, just issue the expressions directly through the Erlang console).
+
+Use the following command to show the current ACL DB contents:
+
+```
+./rabbitmqctl eval "aclstore:list_permissions()."
+```
+
+If its the first time you execute this plugin, you should see an empty array. Now, load the ACL file by using the
+following command:
+
+```
+./rabbitmqctl eval "aclstore:load_permissions_file(<absolute_path_to_the_file>)."
+```
+
+Executing the permission list command again should give the following result:
+
+```
+[
+{"audience",read,"news/categories/*"}
+,{"editor",read,"news/categories/*"}
+,{"editor",readwrite,"news/events`"}
+,{"journalist",readwrite,"news/categories/*"}
+,{"journalist",read,"news/events`"}
+]
+```
+
+Now RabbitMQ is configured to start exchanging messages between our roles. In order to test the message interchange,
+the RabbitMQ ACL Tool will be used.
+
+In order to simulate the behavior depicted in the problem description, open two consoles and use the ACL Tool to
+listen for news in `news/categories/sports` with journalist permissions in one tab and with audience permissions in
+the other.
+
+```
+./acltool.js listen -U journalist -P password newsfeed "news/categories/sports"
+./acltool.js listen -U audience -P password newsfeed "news/categories/sports"
+```
+
+Now, if we try publishing a piece of news using the journalist user:
+```
+./acltool.js publish -U journalist -P password newsfeed "news/categories/sports" "New kind of seven-winged chicken developed"
+```
+
+We should see the news appearing in both listeners. If we now try to publish with the audience user, we should get an error:
+```
+./acltool.js listen -U journalist -P password newsfeed "news/categories/sports"
+```
+And no news should appear in the listeners.
+
+If we try to do the same with the `news/events` routing key:
+```
+./acltool.js listen -U audience -P password newsfeed "news/events"
+
+./acltool.js listen -U journalist -P password newsfeed "news/events"
+```
+We will find that the first command raises an error, as the user `audience` is not allowed to bind queues with that
+routing key. If we publish a events message with the editor user, we should find it in the journalist queue:
+```
+./acltool.js publish -U editor -P password newsfeed "news/events" "Cover the US elections"
+```
 
 ## <a name="development"/> Development
 ### Overview
@@ -91,6 +210,8 @@ user jenniferdoe
 topic read root/messages
 ```
 
+All the lines beginning with the `#` character are ignored as comments.
+
 As it can be seen from the example, the files are divided into different user sections, separated by the `user <username>`
 expression. For each user section, there is a list of `topic <permission> <pattern>` expressions indicating the permissions
 the user have over different resource patterns.
@@ -101,7 +222,7 @@ will be applied. Default permissions are modelled internally as corresponding to
 
 If, after applying both the user specific and the global permissions no permissions are found, the access will be rejected.
 
-##### Permission storage
+#####  <a name="aclstore_commands"/> Permission storage
 
 The ACL Store has been developed as a OTP generic server. To ease the use of the server, a set of functions was added to
 the `aclstore` module.
@@ -147,7 +268,7 @@ part of the process, so all the previous entries would be kept in the new DB.
 
 Saves the current ACL DB contents to the given file.
 
-##### AMQP Administration
+##### <a name="amqp_administration"/> AMQP Administration API
 
 Disclaimer: this administration API is provisional and subject to changes in the near future. In particular, the use of
 routing keys to separate administration commands may be replaced by a payload based selection.
@@ -185,8 +306,20 @@ Sections
 Supervisor tree
 
 
-### Build
+### <a name="build"/>  Build
+
+All the build tasks for the project are managed using Makefile (v4.0+).
+
+The following tasks are allowed:
+
+* `make all`: prepare all the dependencies and compile the source code.
+* `make tests`: builds all the code and executes the tests under the `/test` directory.
+* `make run-broker`: launches a RabbitMQ instance with the loaded plugin, for testing purposes. This task doesn't invoke
+any building task, so `make all` should be executed before to ensure the plugin has been created.
+
+* `make clean`: clean all the temporary files and generated artifacts.
+* `make dist`: builds the packages to be distributed.
 
 
-### Test
+### <a name="test"/> Test
 
