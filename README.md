@@ -78,7 +78,7 @@ The following table shows the meaning of each permission type
 
 The following excerpt shows an example of an ACL file:
 
-´´´
+```
 topic read #
 
 # Topic permissions for Jack Doe user
@@ -89,7 +89,7 @@ topic readwrite root/subroot/+
 # Topic permissions for Jennifer Doe
 user jenniferdoe
 topic read root/messages
-´´´
+```
 
 As it can be seen from the example, the files are divided into different user sections, separated by the `user <username>`
 expression. For each user section, there is a list of `topic <permission> <pattern>` expressions indicating the permissions
