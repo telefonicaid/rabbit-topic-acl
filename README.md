@@ -14,26 +14,26 @@
 
 ## <a name="overview"/> Overview
 ### Description
-This project aims to provide an authorization plugin for Rabbit MQ that will manage the access to RabbitMQ resources
+This project aims to provide an authorization plugin for [Rabbit MQ](https://www.rabbitmq.com/) that will manage the access to RabbitMQ resources
 based on the Routing Keys used to publish and bind queues. The ultimate goal of this plugin is to be used along the
 RabbitMQ MQTT plugin in order to use RabbitMQ as an MQTT broker with ACL-based authorization.
 
 Permissions for each routing key will be defined in Access Control Lists (ACLs) with a format similar to the one used
-for Mosquitto ACLs.
+for Mosquitto ACLs (described in the [man page of Mosquitto.conf](https://mosquitto.org/man/mosquitto-conf-5.html)).
 
 ## <a name="usage"/> Usage
 ### <a name="deployment"/> Deployment
 
 In order to deploy the plugin:
 - Build the packages for distribution with `make dist`.
-- Move the generated `plugins/rabbitmq_topic_acl-<version>.ez`
-- Enable the plugins with the `rabbitmq-plugins` administration command.
+- Move the generated `plugins/rabbitmq_topic_acl-<version>.ez` to the `plugins` directory of your RabbitMQ instance.
+- Enable the plugins with the `rabbitmq-plugins` administration shell command.
 
 Take into account that once the plugin is enabled, it will enforce the authorization rules for all the RabbitMQ transactions.
 
 ### <a name="administration"/> Administration
 
-Before starting to use the plugin, an ACL must be loaded in the database. For all the administrative actions, the
+Before starting to use the plugin, an ACL must be loaded in the internal RabbitMQ database (Mnesia). For all the administrative actions, the
 RabbitMQ broker must be running with the plugin installed and enabled.
 
 There are two ways of managing the ACL DB contents:
@@ -63,8 +63,9 @@ All the messages will be published to the `newsfeed` exchange.
 
 All the files for this example can be found in the `/docs/example1` folder.
 
-In order to setup the initial scenario, the RabbitMQ users must be created in the broker. Go to the `bin/` folder of
-your RabbitMQ instance and execute the `setupTest.sh` script. This script will create three users, on for each role in
+In order to setup the initial scenario, the RabbitMQ users must be created in the broker. Go to the `sbin/` folder of
+your RabbitMQ instance, copy the `setupTest.sh` example script (that you can find in the `docs/example1` folder) in that
+folder and execute it. This script will create three users, one for each role in
 our example app: journalist, audience and editor. It also gives permissions for accessing all kind of entities in the
 default VHost. Take into account that this permissions are used at a different level than the routing key permissions
 offered by the plugin: this plugin does not override default RabbitMQ security, it adds a new level of security that
@@ -122,8 +123,9 @@ Now, if we try publishing a piece of news using the journalist user:
 
 We should see the news appearing in both listeners. If we now try to publish with the audience user, we should get an error:
 ```
-./acltool.js listen -U journalist -P password newsfeed "news/categories/sports"
+./acltool.js publish -U audience -P password newsfeed "news/categories/sports" "A small duck wins the Heavy Weights International Championship by points"
 ```
+
 And no news should appear in the listeners.
 
 If we try to do the same with the `news/events` routing key:
@@ -157,7 +159,7 @@ The following sections describe each group in detail.
 This group of modules provides the following features:
 
 - ACL Store application: an application that manages the loaded ACL contents. All the information is stored in the
-`` table in Mnesia (with disc copies). ACL entries can be added or removed dynamically through the use of the
+`aclstore_record` table in Mnesia (with disc copies). ACL entries can be added or removed dynamically through the use of the
 functions provided by the `aclstore` module.
 
 - Utility functions to load and save the current ACLs from (to) files.
@@ -223,7 +225,7 @@ If, after applying both the user specific and the global permissions no permissi
 
 #####  <a name="aclstore_commands"/> Permission storage
 
-The ACL Store has been developed as a OTP generic server. To ease the use of the server, a set of functions was added to
+The ACL Store has been developed as a Open Telecom Platform (OTP) generic server. To ease the use of the server, a set of functions was added to
 the `aclstore` module.
 
 ###### add_permission(User, Permission, Topic)
@@ -354,4 +356,7 @@ make tests
 The execution of the tests generate a `logs/` folder under the root folder, containing logs of the execution of all suites
 as well as a web version of the execution reports.
 
+### License
 
+This plugin is licensed under Affero General Public License (GPL) version 3. You can find a copy of the license in the
+repository root.
