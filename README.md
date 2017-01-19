@@ -318,6 +318,7 @@ authorization mechanisms (defaults to "guest").
 
 The following image shows the supervisor tree of the plugin application.
 
+![Supervisor tree](docs/img/supervisiontree.png "Supervisor tree")
 
 As it can be seen in the image, there are three generic servers in place, each one with its own supervisor. All the
 supervisores are handled, in time, by a global application supervisor.
