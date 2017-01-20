@@ -25,39 +25,15 @@
 %%% @end
 %%% Created : 28. dic 2016 17:36
 %%%-------------------------------------------------------------------
--module(aclstore).
+-module(topic_utils).
 -author("dmoranj").
 
--export([start/2, stop/1]).
+%% API
+-export([match/2]).
 
--export([add_permission/3, get_permissions/1, remove_permissions/1, read_permissions_file/1, load_permissions_file/1]).
--export([list_permissions/0, save_permissions_file/1, clear_permissions/0]).
-
-start(normal, []) ->
-  ok.
-
-stop(_) -> ok.
-
-add_permission(User, Permission, Topic) ->
-  gen_server:call({global, aclstore_worker}, {add, User, Permission, Topic}).
-
-get_permissions(User) ->
-  gen_server:call({global, aclstore_worker}, {get, User}).
-
-list_permissions() ->
-  gen_server:call({global, aclstore_worker}, {list}).
-
-remove_permissions(User) ->
-  gen_server:call({global, aclstore_worker}, {remove, User}).
-
-clear_permissions() ->
-  gen_server: call({global, aclstore_worker}, {clear}).
-
-read_permissions_file(Filename) ->
-  gen_server:call({global, aclstore_worker}, {read_file, Filename}).
-
-load_permissions_file(Filename) ->
-  gen_server:call({global, aclstore_worker}, {load_file, Filename}).
-
-save_permissions_file(Filename) ->
-  gen_server:call({global, aclstore_worker}, {save_file, Filename}).
+match(Topic, Expression) ->
+  Regex = re:replace(Expression, "\\*|#", "[A-Za-z0-9]+", [global, {return, list}]),
+  case re:run(Topic, "^" ++ Regex ++ "$", [{capture, none}]) of
+    match -> true;
+    _ -> false
+  end.

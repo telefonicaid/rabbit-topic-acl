@@ -1,0 +1,10 @@
+user journalist
+topic readwrite news/categories/*
+topic read news/events
+
+user editor
+topic read news/categories/*
+topic readwrite news/events
+
+user audience
+topic read news/categories/*

@@ -3,7 +3,7 @@
 %%% @copyright (C) 2016, Telefonica Investigación y Desarrollo, S.A.U
 %%% @doc
 %%%
-%%% This file is part of RabitMQ ACL Topic plugin.
+%%% This file is part of RabbitMQ ACL Topic plugin.
 %%%
 %%% RabbitMQ ACL Topic plugin is free software: you can redistribute it and/or
 %%% modify it under the terms of the GNU Affero General Public License as
@@ -25,39 +25,24 @@
 %%% @end
 %%% Created : 28. dic 2016 17:36
 %%%-------------------------------------------------------------------
--module(aclstore).
+-module(aclenforce_sup).
 -author("dmoranj").
 
--export([start/2, stop/1]).
+-behaviour(supervisor).
 
--export([add_permission/3, get_permissions/1, remove_permissions/1, read_permissions_file/1, load_permissions_file/1]).
--export([list_permissions/0, save_permissions_file/1, clear_permissions/0]).
+-export([start_link/0, init/1]).
 
-start(normal, []) ->
-  ok.
+start_link() ->
+  supervisor:start_link(?MODULE, []).
 
-stop(_) -> ok.
+init([]) ->
+  io:format("~n~nStarted ACL Enforce supervisor~n"),
 
-add_permission(User, Permission, Topic) ->
-  gen_server:call({global, aclstore_worker}, {add, User, Permission, Topic}).
-
-get_permissions(User) ->
-  gen_server:call({global, aclstore_worker}, {get, User}).
-
-list_permissions() ->
-  gen_server:call({global, aclstore_worker}, {list}).
-
-remove_permissions(User) ->
-  gen_server:call({global, aclstore_worker}, {remove, User}).
-
-clear_permissions() ->
-  gen_server: call({global, aclstore_worker}, {clear}).
-
-read_permissions_file(Filename) ->
-  gen_server:call({global, aclstore_worker}, {read_file, Filename}).
-
-load_permissions_file(Filename) ->
-  gen_server:call({global, aclstore_worker}, {load_file, Filename}).
-
-save_permissions_file(Filename) ->
-  gen_server:call({global, aclstore_worker}, {save_file, Filename}).
+  {ok, {{one_for_one, 3, 10},
+    [{aclenforce_worker,
+      {aclenforce_worker, start_link, []},
+      permanent,
+      10000,
+      worker,
+      [aclenforce_worker]}
+    ]}}.
