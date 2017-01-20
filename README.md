@@ -71,7 +71,7 @@ default VHost. Take into account that this permissions are used at a different l
 offered by the plugin: this plugin does not override default RabbitMQ security, it adds a new level of security that
 takes into account not only RabbitMQ resources, but also routing keys.
 
-Once the users have been created in the broker, it's time to load the ACL file. There is an example ACL file called
+Once the users have been created in the RabbitMQ broker, it's time to load the ACL file. There is an example ACL file called
 `newsacl` in the `/docs/example1` folder, with the permissions described in the problem description.
 
 The file can be loaded using the RabbitMQ Erlang console. If you are testing the plugin using the `make run-broker`
