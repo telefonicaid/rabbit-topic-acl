@@ -29,11 +29,34 @@
 -author("dmoranj").
 -behaviour(gen_server).
 
+-include_lib("amqp_client/include/amqp_client.hrl").
+
 -export([start_link/0, init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([]).
 
 start_link() ->
   io:format("Starting ACL Enforce worker ~n"),
+
+  {ok, Admin} = application:get_env(rabbitmq_topic_acl, acladmin),
+  {ok, Password} = application:get_env(rabbitmq_topic_acl, aclpassword),
+
+  {ok, Connection} = amqp_connection:start(#amqp_params_direct{
+    username = Admin,
+    password = Password
+  }),
+  {ok, Channel} = amqp_connection:open_channel(Connection),
+
+  {ok, Exchange} = application:get_env(rabbitmq_topic_acl, trashexchange),
+  {ok, Queue} = application:get_env(rabbitmq_topic_acl, trashqueue),
+
+  amqp_channel:call(Channel, #'exchange.declare'{
+    exchange = Exchange,
+    durable = true,
+    type = <<"topic">>}
+  ),
+
+  amqp_channel:call(Channel, #'queue.declare'{queue = Queue}),
+
   gen_server:start_link({global, ?MODULE}, ?MODULE, [], []).
 
 init(_) ->

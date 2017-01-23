@@ -6,6 +6,8 @@
 * [Usage](#usage)
   * [Deployment](#deployment)
   * [Administration](#administration)
+  * [Configuration](#configuration)
+  * [Error management](#errormanagement)
   * [Examples of use](#examples)
 * [Development](#development)
   * [Internal Architecture](#architecture)
@@ -39,6 +41,35 @@ RabbitMQ broker must be running with the plugin installed and enabled.
 There are two ways of managing the ACL DB contents:
 - Through the use of [ERL commands](#aclstore_commands) from the RabbitMQ Erlang console.
 - Through the use of the [AMQP Administration API](#amqp_administration).
+
+### <a name="configuration" >Configuration
+
+The ACL Plugin can be configured through the use of environment variables in the appication file, `rabbitmq_topic_acl.app`.
+The following table shows the accepted variables and their meaning and default values:
+
+
+| Variable            | Description                                    | Default value          |
+| ------------------- |:---------------------------------------------- | ---------------------- |
+| acladmin            | Name of the user that will be used as ACL administrator. This user is needed for internal processes as well as for external management| <<"guest">> |
+| aclpassword         | Password for the administrator user. The password will be given in plain text. | <<"guest">> |
+| exchange            | Name of the exchange that will be used in the AMQP Administration API. | <<"_topicacladmin">> |
+| trashexchange       | Name of the exchange that will be declared for trashing unauthorized messages. | <<"_trash">> |
+| trashqueue          | Name of the trash queue that will be used for all the unauthorized queue bindings. | <<"_trashqueue">> |
+
+Take into account that all the strings must be declared as Erlang IO Strings (`<<"this syntax">>` instead of `"this one"`).
+
+### <a name="errormanagement">
+
+Following the original intention of resembling the MQTT Broker behavior, authorization management is not reported as
+connection errors to the clients performing an unauthorized action. Instead of that:
+
+* Unauthorized messages being published are redirected to a trash exchange (defined in the application environment variables).
+All messages end up in the same exchange, with independence of their original destination. This exchange should, in turn
+be protected using RabbitMQ standard authorization mechanisms (or exposed for client debugging in development environments).
+
+* Unauthorized queue binds are redirected to a trash queue. No message ever arrives to that queue (at least from those
+sent by the system). The queue can also be restricted or exposed depending on the environment, letting users use it for
+debugging their clients.
 
 ### <a name="examples"/> Examples of use
 
@@ -121,12 +152,12 @@ Now, if we try publishing a piece of news using the journalist user:
 ./acltool.js publish -U journalist -P password newsfeed "news/categories/sports" "New kind of seven-winged chicken developed"
 ```
 
-We should see the news appearing in both listeners. If we now try to publish with the audience user, we should get an error:
+We should see the news appearing in both listeners. If we now try to publish with the audience user, no message
+will appear in any of the listeners:
 ```
 ./acltool.js publish -U audience -P password newsfeed "news/categories/sports" "A small duck wins the Heavy Weights International Championship by points"
 ```
-
-And no news should appear in the listeners.
+Note that no error is returned to the caller. The message is redirected to a trash exchange instead.
 
 If we try to do the same with the `news/events` routing key:
 ```
@@ -134,11 +165,13 @@ If we try to do the same with the `news/events` routing key:
 
 ./acltool.js listen -U journalist -P password newsfeed "news/events"
 ```
-We will find that the first command raises an error, as the user `audience` is not allowed to bind queues with that
-routing key. If we publish a events message with the editor user, we should find it in the journalist queue:
+If we publish a events message with the editor user, we should find it in the journalist queue:
 ```
 ./acltool.js publish -U editor -P password newsfeed "news/events" "Cover the US elections"
 ```
+
+The audience listener, on the other hand, doesn't get any messages in their queue, but it doesn't receive an error either.
+Unauthorized queues are silently redirected to a trash queue.
 
 ## <a name="development"/> Development
 ### Overview

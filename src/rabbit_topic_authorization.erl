@@ -27,17 +27,18 @@
 %%%-------------------------------------------------------------------
 -module(rabbit_topic_authorization).
 
--include_lib("rabbit_common/include/rabbit.hrl").
--include_lib("rabbit_common/include/rabbit_framing.hrl").
+-include_lib("amqp_client/include/amqp_client.hrl").
 
 -behaviour(rabbit_channel_interceptor).
 
--export([description/0, intercept/3, applies_to/0, init/1, authorize/5]).
+-export([description/0, intercept/3, applies_to/0, init/1, authorize/3]).
 
 -record(state, {
     user,
     vhost,
-    administrator
+    administrator,
+    exchange,
+    queue
 }).
 
 -import(rabbit_misc, [r/3, format/2, protocol_error/3]).
@@ -55,29 +56,42 @@
 
 
 init(Ch) ->
-    #state{user=rabbit_channel:get_user(Ch), vhost=rabbit_channel:get_vhost(Ch), administrator = <<"guest">>}.
+  {ok, Exchange} = application:get_env(rabbitmq_topic_acl, trashexchange),
+  {ok, Queue} = application:get_env(rabbitmq_topic_acl, trashqueue),
+  {ok, Admin} = application:get_env(rabbitmq_topic_acl, acladmin),
+
+  #state{
+    user=rabbit_channel:get_user(Ch),
+    vhost=rabbit_channel:get_vhost(Ch),
+    administrator = Admin,
+    exchange = Exchange,
+    queue = Queue
+  }.
 
 description() ->
-    [{description,
-      <<"Checks authorization based on routing keys">>}].
+  [{description,
+    <<"Checks authorization based on routing keys">>}].
 
-authorize(Username, RoutingKeyBin, Method, Content, Permission) ->
+authorize(Username, RoutingKeyBin, Permission) ->
   Data = [Permission, Username, RoutingKeyBin],
   io:format("Intercepting: Permission [~w] User [~s] Routing [~s]\n", Data),
-  case aclenforce:authorize(binary_to_list(Username), binary_to_list(RoutingKeyBin), Permission) of
+  aclenforce:authorize(binary_to_list(Username), binary_to_list(RoutingKeyBin), Permission).
+
+intercept(#'basic.publish'{routing_key = RoutingKeyBin, exchange = Exchange} = Method,
+          Content, 
+          _State = #state{user = {_, Username, _, _}, vhost = _VHost, exchange = Trash}) ->
+
+  io:format("Intercepting Method: ~w\n", [Method]),
+  io:format("Intercepting Exchange: ~s\n", [binary_to_list(Exchange)]),
+
+  case authorize(Username, RoutingKeyBin, write) of
     true ->
       io:format("Accepted\n"),
       {Method, Content};
     _ ->
       io:format("Rejected\n"),
-      protocol_error(authentication_failure, "Rejected action [~w] for user [~s] over topic [~s]", Data)
-  end.
-
-intercept(#'basic.publish'{routing_key = RoutingKeyBin} = Method,
-          Content, 
-          _State = #state{user = {_, Username, _, _}, vhost = _VHost}) ->
-
-  authorize(Username, RoutingKeyBin, Method, Content, write);
+      {Method#'basic.publish'{exchange = Trash}, Content}
+  end;
 
 intercept(#'exchange.bind'{routing_key = _RoutingKeyBin} = Method,
           Content, 
@@ -93,14 +107,22 @@ intercept(#'exchange.unbind'{routing_key = _RoutingKeyBin} = Method,
 	  io:format("Intercepting exchange.unbind\n"),
 	  {Method, Content};
 
-intercept(#'queue.bind'{routing_key = RoutingKeyBin} = Method,
+intercept(#'queue.bind'{routing_key = RoutingKeyBin, queue = Queue} = Method,
           Content, 
-          _State = #state{user = {_, Username, _, _}, vhost = _VHost, administrator=Admin}) ->
+          _State = #state{user = {_, Username, _, _}, vhost = _VHost, administrator= Admin, queue = Trash}) ->
 	  
-	io:format("Intercepting queue.bind\n"),
-  if
-    Username =/= Admin -> authorize(Username, RoutingKeyBin, Method, Content, read);
-    true -> {Method, Content}
+	io:format("Intercepting queue.bind: ~s\n", [Queue]),
+
+  case authorize(Username, RoutingKeyBin, read) of
+    true ->
+      io:format("Accepted\n"),
+      {Method, Content};
+    _ ->
+      io:format("Rejected\n"),
+      if
+        Username =/= Admin -> {Method#'queue.bind'{queue = Trash}, Content};
+        true -> {Method, Content}
+      end
   end;
 
 intercept(#'queue.unbind'{routing_key = _RoutingKeyBin} = Method,
