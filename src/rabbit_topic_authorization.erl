@@ -74,22 +74,22 @@ description() ->
 
 authorize(Username, RoutingKeyBin, Permission) ->
   Data = [Permission, Username, RoutingKeyBin],
-  io:format("Intercepting: Permission [~w] User [~s] Routing [~s]\n", Data),
+  rabbit_log:debug("Intercepting: Permission [~w] User [~s] Routing [~s]", Data),
   aclenforce:authorize(binary_to_list(Username), binary_to_list(RoutingKeyBin), Permission).
 
 intercept(#'basic.publish'{routing_key = RoutingKeyBin, exchange = Exchange} = Method,
           Content, 
           _State = #state{user = {_, Username, _, _}, vhost = _VHost, exchange = Trash}) ->
 
-  io:format("Intercepting Method: ~w\n", [Method]),
-  io:format("Intercepting Exchange: ~s\n", [binary_to_list(Exchange)]),
+  rabbit_log:debug("Intercepting Method: ~w", [Method]),
+  rabbit_log:debug("Intercepting Exchange: ~s", [binary_to_list(Exchange)]),
 
   case authorize(Username, RoutingKeyBin, write) of
     true ->
-      io:format("Accepted\n"),
+      rabbit_log:debug("Accepted"),
       {Method, Content};
     _ ->
-      io:format("Rejected\n"),
+      rabbit_log:debug("Rejected"),
       {Method#'basic.publish'{exchange = Trash}, Content}
   end;
 
@@ -97,28 +97,28 @@ intercept(#'exchange.bind'{routing_key = _RoutingKeyBin} = Method,
           Content, 
           _State = #state{user = _User, vhost = _VHost}) ->
 	  
-	  io:format("Intercepting exchange.bind\n"),
+	  rabbit_log:debug("Intercepting exchange.bind"),
 	  {Method, Content};
 
 intercept(#'exchange.unbind'{routing_key = _RoutingKeyBin} = Method,
           Content, 
           _State = #state{user = _User, vhost = _VHost}) ->
 	  
-	  io:format("Intercepting exchange.unbind\n"),
+	  rabbit_log:debug("Intercepting exchange.unbind"),
 	  {Method, Content};
 
 intercept(#'queue.bind'{routing_key = RoutingKeyBin, queue = Queue} = Method,
           Content, 
           _State = #state{user = {_, Username, _, _}, vhost = _VHost, administrator= Admin, queue = Trash}) ->
 	  
-	io:format("Intercepting queue.bind: ~s\n", [Queue]),
+	rabbit_log:debug("Intercepting queue.bind: ~s", [Queue]),
 
   case authorize(Username, RoutingKeyBin, read) of
     true ->
-      io:format("Accepted\n"),
+      rabbit_log:debug("Accepted"),
       {Method, Content};
     _ ->
-      io:format("Rejected\n"),
+      rabbit_log:debug("Rejected"),
       if
         Username =/= Admin -> {Method#'queue.bind'{queue = Trash}, Content};
         true -> {Method, Content}
@@ -129,7 +129,7 @@ intercept(#'queue.unbind'{routing_key = _RoutingKeyBin} = Method,
           Content, 
           _State = #state{user = _User, vhost = _VHost}) ->
 	  
-	  io:format("Intercepting queue.unbind\n "),
+	  rabbit_log:debug("Intercepting queue.unbind "),
 	  {Method, Content};
 
 intercept(Method, Content, _State) ->

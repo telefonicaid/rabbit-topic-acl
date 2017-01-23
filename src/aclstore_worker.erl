@@ -46,7 +46,7 @@
 }).
 
 start_link() ->
-  io:format("Starting ACL worker ~n"),
+  rabbit_log:info("Starting ACL worker "),
   gen_server:start_link({global, ?MODULE}, ?MODULE, [], []).
 
 init(_) ->
@@ -57,26 +57,26 @@ init(_) ->
 terminate(_, _) -> ok.
 
 handle_cast(_, State) ->
-  io:format("Handling generic synchronous message ~n"),
+  rabbit_log:debug("Handling generic synchronous message "),
   {noreply,State}.
 
 handle_info(_, State) ->
-  io:format("Handling incoming generic message ~n"),
+  rabbit_log:debug("Handling incoming generic message "),
   {noreply,State}.
 
 code_change(_, State, _) ->
   {ok, State}.
 
 create_tables(Nodes) ->
-  io:format("Creating tables ~n"),
+  rabbit_log:debug("Creating tables "),
   case mnesia:create_table(aclstore_record,
     [{attributes, record_info(fields, aclstore_record)},
       {index, [#aclstore_record.topic]},
       {disc_copies, Nodes},
       {type, bag}]) of
 
-    {atomic, ok} -> io:format("Table aclstore successfully created~n");
-    {aborted, Reason} -> io:format("Could not create table ~w ~n", [Reason])
+    {atomic, ok} -> rabbit_log:debug("Table aclstore successfully created");
+    {aborted, Reason} -> rabbit_log:warning("Could not create table ~w ", [Reason])
   end.
 
 install(Nodes) ->
@@ -166,13 +166,13 @@ add_permission(User, Permission, Topic) ->
     })
       end,
   case mnesia:activity(transaction, F) of
-    ok -> io:format("Permission added successfully"),
+    ok -> rabbit_log:debug("Permission added successfully"),
       ok;
-    Error -> io:format("Unexpected error adding user: ~w~n", [Error])
+    Error -> rabbit_log:error("Unexpected error adding user: ~w", [Error])
   end.
 
 handle_call({add, User, Permission, Topic}, _From, State) ->
-  io:format("Handling add ~n"),
+  io:format("Handling add "),
   Result = add_permission(User, Permission, Topic),
   {reply, Result, State};
 
@@ -210,7 +210,7 @@ handle_call({load_file, Filename}, _From, State) ->
   {reply, Result, State};
 
 handle_call(_, _, State) ->
-  io:format("Ignoring unknown handle ~n"),
+  rabbit_log:warning("Ignoring unknown handle "),
   {reply, ok, State}.
 
 

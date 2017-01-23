@@ -71,44 +71,44 @@ init([]) ->
   Sub = #'basic.consume'{queue = Queue},
   #'basic.consume_ok'{consumer_tag = Tag} = amqp_channel:call(Channel, Sub),
 
-  io:format("Initiated custom plugin with Queue: ~s~n", [Queue]),
+  rabbit_log:info("Initiated custom plugin with Queue: ~s", [Queue]),
   {ok, #state{channel = Channel, queue = Queue, tag = Tag, exchange = Exchange }}.
 
 handle_call(_Msg, _From, State) ->
-  io:format("Handling generic asynchronous ~n"),
+  rabbit_log:debug("Handling generic asynchronous "),
   {reply, unknown_command, State}.
 
 handle_cast(_, State) ->
-  io:format("Handling generic synchronous message ~n"),
+  rabbit_log:debug("Handling generic synchronous message "),
   {noreply,State}.
 
 handle_info({{'basic.deliver', _Queue, _, _, _, <<"add">>}, {'amqp_msg', _, Msg} }, State) ->
   [User, Permission, Topic] = string:tokens(string:strip(binary_to_list(Msg), both, $;), " "),
   aclstore:add_permission(User, list_to_atom(Permission), Topic),
-  io:format("Adding new permission: ~s~n~n", [Msg]),
+  rabbit_log:debug("Adding new permission: ~s", [Msg]),
   {noreply, State};
 
 handle_info({{'basic.deliver', _Queue, _, _, _, <<"clear">>}, {'amqp_msg', _, _Msg} }, State) ->
-  io:format("Removing all permissions from memory. ~n"),
+  rabbit_log:debug("Removing all permissions from memory. "),
   aclstore:clear_permissions(),
   {noreply, State};
 
 handle_info({{'basic.deliver', _Queue, _, _, _, <<"save">>}, {'amqp_msg', _, _Msg} }, State) ->
-  io:format("Saving permission list. ~n"),
+  rabbit_log:debug("Saving permission list. "),
   {noreply, State};
 
 handle_info({{'basic.deliver', _Queue, _, _, _, <<"refresh">>}, {'amqp_msg', _, _Msg} }, State) ->
   Permissions = aclstore:list_permissions(),
   Payload = aclstore_worker:to_text_format(Permissions),
-  io:format("Refreshing permission list:\n\n~s\n", [Payload]),
+  rabbit_log:debug("Refreshing permission list:\n\n~s\n", [Payload]),
   {noreply, State};
 
 handle_info({'basic.consume_ok', _ }, State) ->
-  io:format("Handling consume ACK~n"),
+  rabbit_log:debug("Handling consume ACK"),
   {noreply, State};
 
 handle_info({Info, _}, State) ->
-  io:format("Unknown message: ~w~n", [Info]),
+  rabbit_log:warning("Unknown message: ~w", [Info]),
   {noreply, State}.
 
 terminate(_, #state{channel = Channel}) ->
