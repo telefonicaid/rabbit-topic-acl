@@ -36,7 +36,9 @@
 -record(state, {
     user,
     vhost,
-    administrator
+    administrator,
+    exchange,
+    queue
 }).
 
 -import(rabbit_misc, [r/3, format/2, protocol_error/3]).
@@ -54,7 +56,17 @@
 
 
 init(Ch) ->
-  #state{user=rabbit_channel:get_user(Ch), vhost=rabbit_channel:get_vhost(Ch), administrator = <<"guest">>}.
+  {ok, Exchange} = application:get_env(rabbitmq_topic_acl, trashexchange),
+  {ok, Queue} = application:get_env(rabbitmq_topic_acl, trashqueue),
+  {ok, Admin} = application:get_env(rabbitmq_topic_acl, acladmin),
+
+  #state{
+    user=rabbit_channel:get_user(Ch),
+    vhost=rabbit_channel:get_vhost(Ch),
+    administrator = Admin,
+    exchange = Exchange,
+    queue = Queue
+  }.
 
 description() ->
   [{description,
@@ -67,7 +79,7 @@ authorize(Username, RoutingKeyBin, Permission) ->
 
 intercept(#'basic.publish'{routing_key = RoutingKeyBin, exchange = Exchange} = Method,
           Content, 
-          _State = #state{user = {_, Username, _, _}, vhost = _VHost}) ->
+          _State = #state{user = {_, Username, _, _}, vhost = _VHost, exchange = Trash}) ->
 
   io:format("Intercepting Method: ~w\n", [Method]),
   io:format("Intercepting Exchange: ~s\n", [binary_to_list(Exchange)]),
@@ -78,7 +90,7 @@ intercept(#'basic.publish'{routing_key = RoutingKeyBin, exchange = Exchange} = M
       {Method, Content};
     _ ->
       io:format("Rejected\n"),
-      {Method#'basic.publish'{exchange = <<"_trash">> }, Content}
+      {Method#'basic.publish'{exchange = Trash}, Content}
   end;
 
 intercept(#'exchange.bind'{routing_key = _RoutingKeyBin} = Method,
@@ -97,7 +109,7 @@ intercept(#'exchange.unbind'{routing_key = _RoutingKeyBin} = Method,
 
 intercept(#'queue.bind'{routing_key = RoutingKeyBin, queue = Queue} = Method,
           Content, 
-          _State = #state{user = {_, Username, _, _}, vhost = _VHost, administrator= Admin}) ->
+          _State = #state{user = {_, Username, _, _}, vhost = _VHost, administrator= Admin, queue = Trash}) ->
 	  
 	io:format("Intercepting queue.bind: ~s\n", [Queue]),
 
@@ -108,7 +120,7 @@ intercept(#'queue.bind'{routing_key = RoutingKeyBin, queue = Queue} = Method,
     _ ->
       io:format("Rejected\n"),
       if
-        Username =/= Admin -> {Method#'queue.bind'{queue = <<"_trashqueue">> }, Content};
+        Username =/= Admin -> {Method#'queue.bind'{queue = Trash}, Content};
         true -> {Method, Content}
       end
   end;

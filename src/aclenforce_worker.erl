@@ -37,19 +37,25 @@
 start_link() ->
   io:format("Starting ACL Enforce worker ~n"),
 
+  {ok, Admin} = application:get_env(rabbitmq_topic_acl, acladmin),
+  {ok, Password} = application:get_env(rabbitmq_topic_acl, aclpassword),
+
   {ok, Connection} = amqp_connection:start(#amqp_params_direct{
-    username = <<"guest">>,
-    password = <<"guest">>
+    username = Admin,
+    password = Password
   }),
   {ok, Channel} = amqp_connection:open_channel(Connection),
 
+  {ok, Exchange} = application:get_env(rabbitmq_topic_acl, trashexchange),
+  {ok, Queue} = application:get_env(rabbitmq_topic_acl, trashqueue),
+
   amqp_channel:call(Channel, #'exchange.declare'{
-    exchange = <<"_trashexchange">>,
+    exchange = Exchange,
     durable = true,
     type = <<"topic">>}
   ),
 
-  amqp_channel:call(Channel, #'queue.declare'{queue = <<"_trashqueue">>}),
+  amqp_channel:call(Channel, #'queue.declare'{queue = Queue}),
 
   gen_server:start_link({global, ?MODULE}, ?MODULE, [], []).
 
