@@ -36,7 +36,7 @@ start_link() ->
   supervisor:start_link(?MODULE, []).
 
 init([]) ->
-  io:format("~n~nStarted ACL Store supervisor~n"),
+  rabbit_log:info("Started ACL Store supervisor"),
 
   {ok, {{one_for_one, 3, 10},
     [{aclstore_worker,

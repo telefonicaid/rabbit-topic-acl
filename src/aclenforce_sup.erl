@@ -36,7 +36,7 @@ start_link() ->
   supervisor:start_link(?MODULE, []).
 
 init([]) ->
-  io:format("~n~nStarted ACL Enforce supervisor~n"),
+  rabbit_log:info("Started ACL Enforce supervisor"),
 
   {ok, {{one_for_one, 3, 10},
     [{aclenforce_worker,

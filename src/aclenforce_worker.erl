@@ -35,10 +35,17 @@
 -export([]).
 
 start_link() ->
-  io:format("Starting ACL Enforce worker ~n"),
+  rabbit_log:info("Starting ACL Enforce worker "),
 
-  {ok, Admin} = application:get_env(rabbitmq_topic_acl, acladmin),
-  {ok, Password} = application:get_env(rabbitmq_topic_acl, aclpassword),
+  {ok, Admin} = case application:get_env(rabbitmq_topic_acl, acladmin) of
+    {ok, Value} -> {ok, Value};
+    _ -> {ok, <<"guest">>}
+  end,
+
+  {ok, Password} = case application:get_env(rabbitmq_topic_acli, aclpassword) of
+    {ok, Returnedpass} -> {ok, Returnedpass};
+    _ -> {ok, <<"guest">>}
+  end,
 
   {ok, Connection} = amqp_connection:start(#amqp_params_direct{
     username = Admin,
@@ -65,11 +72,11 @@ init(_) ->
 terminate(_, _) -> ok.
 
 handle_cast(_, State) ->
-  io:format("Handling generic synchronous message ~n"),
+  rabbit_log:debug("Handling generic synchronous message "),
   {noreply,State}.
 
 handle_info(_, State) ->
-  io:format("Handling incoming generic message ~n"),
+  rabbit_log:debug("Handling incoming generic message "),
   {noreply,State}.
 
 code_change(_, State, _) ->
@@ -92,12 +99,12 @@ is_accepted(Permission, Matched) ->
   end.
 
 handle_call({authorize, User, Topic, Permission}, _From, State) ->
-  io:format("Authorizing User [~s] for topic [~s] and permissions [~w]\n", [User, Topic, Permission]),
+  rabbit_log:debug("Authorizing User [~s] for topic [~s] and permissions [~w]", [User, Topic, Permission]),
   Permissions = aclstore:get_permissions(User),
   Matched = match_with_topic(Permissions, Topic),
 
   {reply, is_accepted(Permission, Matched), State};
 
 handle_call(_, _, State) ->
-  io:format("Ignoring unknown handle ~n"),
+  rabbit_log:warning("Ignoring unknown handle "),
   {reply, ok, State}.

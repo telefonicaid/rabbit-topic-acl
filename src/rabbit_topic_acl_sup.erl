@@ -36,7 +36,7 @@ start_link() ->
   supervisor:start_link({local, ?MODULE}, ?MODULE, _Arg = []).
 
 init(Args) ->
-  io:format("~n~nStarted global supervisor~n~n~n"),
+  rabbit_log:info("Started global supervisor"),
 
   {ok, {{one_for_one, 3, 10},
     [
