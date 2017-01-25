@@ -74,10 +74,15 @@ else
   exit 2
 fi
 
+# RabbitMQ version whwre this plugin may run
+# Plugins are very tied to specific RabbitMQ Version
+RABBITMQ_VERSION=3.6.6
 
 rpmbuild -ba ${RPM_BASE_DIR}/SPECS/rabbitmq_topic_acl.spec \
     --define "_srcdir ${BASE_DIR}/plugins" \
     --define "_project_user root" \
     --define "_topdir ${RPM_BASE_DIR}" \
     --define "_product_version ${PRODUCT_VERSION}" \
-    --define "_product_release ${PRODUCT_RELEASE}"
+    --define "_product_release ${PRODUCT_RELEASE}" \
+    --define "_rabbitmq_version ${RABBITMQ_VERSION}"
+

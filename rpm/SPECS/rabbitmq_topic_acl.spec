@@ -1,6 +1,4 @@
 
-%define _rabbitmq_version 3.6.6
-%define _plugin_name rabbitmq_topic_acl
 
 Summary:   RabbitMQ Topic ACL Authorization plugin
 Name:      rabbitmq-topic-acl-plugin
@@ -9,12 +7,23 @@ Release:   %{_product_release}
 License:   AGPLv3
 BuildRoot: %{_topdir}/BUILDROOT/
 BuildArch: noarch
-Requires:  rabbitmq-server = 3.6.6
+Requires:  rabbitmq-server = %{_rabbitmq_version}
 Group:     Applications/Engineering
 Vendor:    Telefonica I+D
 
 %description
 an authorization plugin for Rabbit MQ that will manage the access to RabbitMQ resources based on the Routing Keys used to publish and bind queues. The ultimate goal of this plugin is to be used along the RabbitMQ MQTT plugin in order to use RabbitMQ as an MQTT broker with ACL-based authorization.
+
+########## WARNING FROM THE RABBITMQ WEBSITE ##################################
+# The enabled plugins configuration is preserved between upgrades, 
+# so there is no need to re-enable plugins after an upgrade, 
+# but because the plugins directory changes between versions, 
+# any third party plugins will need to be copied to the new directory. 
+# It's very possible # that due to API changes you may need 
+# to check for updates to third party plugins at this point.
+###############################################################################
+
+%define _plugin_name rabbitmq_topic_acl
 
 # System folders
 %define _install_dir /usr/lib/rabbitmq/lib/rabbitmq_server-%{_rabbitmq_version}/plugins
