@@ -28,9 +28,38 @@
 -module(rabbit_topic_acl_sup).
 -author("dmoranj").
 
+-include_lib("amqp_client/include/amqp_client.hrl").
 -behaviour(supervisor).
 
 -export([start_link/0, init/1]).
+
+create_default_queues() ->
+  {ok, Admin} = case application:get_env(rabbitmq_topic_acl, acladmin) of
+                  {ok, Value} -> {ok, Value};
+                  _ -> {ok, <<"guest">>}
+                end,
+
+  {ok, Password} = case application:get_env(rabbitmq_topic_acli, aclpassword) of
+                     {ok, Returnedpass} -> {ok, Returnedpass};
+                     _ -> {ok, <<"guest">>}
+                   end,
+
+  {ok, Connection} = amqp_connection:start(#amqp_params_direct{
+    username = Admin,
+    password = Password
+  }),
+  {ok, Channel} = amqp_connection:open_channel(Connection),
+
+  {ok, Exchange} = application:get_env(rabbitmq_topic_acl, trashexchange),
+  {ok, Queue} = application:get_env(rabbitmq_topic_acl, trashqueue),
+
+  amqp_channel:call(Channel, #'exchange.declare'{
+    exchange = Exchange,
+    durable = true,
+    type = <<"topic">>}
+  ),
+
+  amqp_channel:call(Channel, #'queue.declare'{queue = Queue}).
 
 start_link() ->
   supervisor:start_link({local, ?MODULE}, ?MODULE, _Arg = []).
@@ -38,6 +67,7 @@ start_link() ->
 init(Args) ->
   rabbit_log:info("Started global supervisor"),
 
+  create_default_queues(),
   {ok, {{one_for_one, 3, 10},
     [
       {aclstore_sup,
