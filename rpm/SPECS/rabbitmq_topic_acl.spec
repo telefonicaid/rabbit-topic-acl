@@ -9,7 +9,7 @@ Release:   %{_product_release}
 License:   AGPLv3
 BuildRoot: %{_topdir}/BUILDROOT/
 BuildArch: noarch
-Requires:  rabbitmq-server = %{_rabbitmq_verion}
+Requires:  rabbitmq-server >= 3.6.6
 Group:     Applications/Engineering
 Vendor:    Telefonica I+D
 
