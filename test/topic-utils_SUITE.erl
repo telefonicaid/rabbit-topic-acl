@@ -26,10 +26,10 @@ match_substring(_) ->
   false = topic_utils:match("/root1/root2/root3", "root2").
 
 match_inner_wildcard(_) ->
-  true = topic_utils:match("/root1/root2", "/*/root2"),
-  true = topic_utils:match("/root1/root2", "/root1/*"),
-  true = topic_utils:match("/root1/root2", "/*/*"),
-  false = topic_utils:match("/root1/root2", "/*"),
-  false = topic_utils:match("/root1/root2", "*/root2"),
-  false = topic_utils:match("/root1/root2", "root1/.*"),
+  true = topic_utils:match("/root1/root2", "/+/root2"),
+  true = topic_utils:match("/root1/root2", "/root1/+"),
+  true = topic_utils:match("/root1/root2", "/+/+"),
+  false = topic_utils:match("/root1/root2", "/+"),
+  false = topic_utils:match("/root1/root2", "+/root2"),
+  false = topic_utils:match("/root1/root2", "root1/.+"),
   ok.

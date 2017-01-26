@@ -32,7 +32,7 @@
 -export([match/2]).
 
 match(Topic, Expression) ->
-  Regex = re:replace(Expression, "\\*|#", "[A-Za-z0-9]+", [global, {return, list}]),
+  Regex = re:replace(Expression, "\\+|#", "[A-Za-z0-9]+", [global, {return, list}]),
   case re:run(Topic, "^" ++ Regex ++ "$", [{capture, none}]) of
     match -> true;
     _ -> false
