@@ -33,6 +33,38 @@ In order to deploy the plugin:
 
 Take into account that once the plugin is enabled, it will enforce the authorization rules for all the RabbitMQ transactions.
 
+#### IMPORTANT: Side note about logging
+
+This plugin has been developed using the `master` branch for RabbitMQ, and thus it uses the RabbitMQ mechanism for logging
+in version '3.7.0', i.e.: [Lager](https://github.com/erlang-lager/lager). This approach, though, doesn't work for earlier
+versions of RabbitMQ, unless an additional plugin supporting this kind of logging is installed. That plugin can be
+found in [Rabbitmq-lager](https://github.com/hyperthunk/rabbitmq-lager).
+
+In order to install the plugin:
+
+1. Clone the repository:
+```
+git clone https://github.com/hyperthunk/rabbitmq-lager.git
+```
+2. Update the `rabbitmq-components.mq` file with the following command:
+```
+make rabbitmq-components-mk
+```
+3. Make the plugin:
+```
+make
+make dist
+```
+4. Copy the plugin and its dependencies to the RabbitMQ plugins folder:
+```
+cp plugins/goldrush-0.1.9.ez <rabbitmq_path>/plugins/
+cp plugins/lager-3.2.2.ez <rabbitmq_path>/plugins/
+```
+5. Enable the plugin
+```
+sbin/rabbitmq-plugins enable lager
+```
+
 ### <a name="administration"/> Administration
 
 Before starting to use the plugin, an ACL must be loaded in the internal RabbitMQ database (Mnesia). For all the administrative actions, the
@@ -172,6 +204,51 @@ If we publish a events message with the editor user, we should find it in the jo
 
 The audience listener, on the other hand, doesn't get any messages in their queue, but it doesn't receive an error either.
 Unauthorized queues are silently redirected to a trash queue.
+
+#### Example 2
+
+This example will show the previous scenario, but using MQTT instead of using AMQP for the communications. In order for
+this scenario to work, a working instance of RabbitMQ with the loaded MQTT plugin will be needed. In order to check
+if your RabbitMQ instance has the MQTT plugin activated, start the server and execute the following command:
+```
+./rabbitmq-plugins list
+```
+If MQTT does not appear in the list, enable it with the following command:
+```
+./rabbitmq-plugins enable rabbitmq_mqtt
+```
+The rest of the setup of the scenario works the same as in Example 1, with the on difference: when using the MQTT plugin
+MQTT topic level separators, "/", are translated internally to ".". This will force us to change the ACL a little bit.
+The new ACL can be found in the `newsacldot` file. Execute the rest of the setup following the previous example's instructions.
+
+Once RabbitMQ is up and running with all the plugins, we will mimic the previous example with MQTT. To that extent, we
+will use Mosquitto MQTT command-line tools to make the subscriptions and publications.
+
+First of all, open two terminals, to listen with the `journalist` and `audience` users:
+```
+mosquitto_sub -u journalist -P password -t "news/categories/sports"
+
+mosquitto_sub -u audience -P password -t "news/categories/sports"
+```
+If you publish with an authorized user to that topic with the following command:
+```
+mosquitto_pub -d -u journalist -P password -t "news/categories/sports" -m "New kind of seven-winged chicken developed"
+```
+You should see the message appearing in both queues. Trying to publish with the `audience` user with the exact same
+command would give no error, but no message should appear in any of the queues.
+
+If now you change the subscriptions to the `news/events` topic:
+```
+mosquitto_sub -u journalist -P password -t "news/events"
+
+mosquitto_sub -u audience -P password -t "news/events"
+```
+And publish using the `editor` user:
+```
+mosquitto_pub -d -u editor -P password -t "news/events" -m "Cover the apocalypsis, please"
+```
+You should see that the message arrives only to the `journalist` user, as the `audience` user has no permissions in that
+topic.
 
 ## <a name="development"/> Development
 ### Overview
