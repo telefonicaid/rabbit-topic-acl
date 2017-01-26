@@ -44,6 +44,8 @@ rm -Rf $RPM_BUILD_ROOT && mkdir -p $RPM_BUILD_ROOT
 
 # Copy all from src to rpm/BUILD
 cp %{_srcdir}/%{_plugin_name}-%{_product_version}.ez %{_build_root_project}
+cp %{_srcdir}/lager-*.ez %{_build_root_project}
+cp %{_srcdir}/goldrush-*.ez %{_build_root_project}
 
 # -------------------------------------------------------------------------------------------- #
 # pre-install section:
