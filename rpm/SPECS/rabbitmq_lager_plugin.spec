@@ -23,7 +23,6 @@ an authorization plugin for Rabbit MQ that will manage the access to RabbitMQ re
 # to check for updates to third party plugins at this point.
 ###############################################################################
 
-%define _plugin_name rabbitmq_topic_acl
 
 # System folders
 %define _install_dir /usr/lib/rabbitmq/lib/rabbitmq_server-%{_rabbitmq_version}/plugins
@@ -43,7 +42,6 @@ rm -Rf $RPM_BUILD_ROOT && mkdir -p $RPM_BUILD_ROOT
 [ -d %{_build_root_project} ] || mkdir -p %{_build_root_project}
 
 # Copy all from src to rpm/BUILD
-cp %{_srcdir}/%{_plugin_name}-%{_product_version}.ez %{_build_root_project}
 cp %{_srcdir}/lager-*.ez %{_build_root_project}
 cp %{_srcdir}/goldrush-*.ez %{_build_root_project}
 
@@ -64,11 +62,6 @@ cp %{_srcdir}/goldrush-*.ez %{_build_root_project}
 # -------------------------------------------------------------------------------------------- #
 %preun
 
-#echo "[INFO] disabling Topic ACL Plugin from RabbitMQ"
-#/usr/sbin/rabbitmq-plugins disable %{_plugin_name}
-#if [ $1 == 0 ]; then
-#  echo "[INFO] Pre-uninstall. Nothing else to do"
-#fi
 
 # -------------------------------------------------------------------------------------------- #
 # post-uninstall section:
@@ -87,5 +80,5 @@ rm -rf $RPM_BUILD_ROOT
 %{_install_dir}
 
 %changelog
-* Mon Jan 23 2017 Víctor Rafael Gonzalez (rafael.gonzalezfuentetaja@telefonica.com) 1.0.0-0.0
-- Initial rabbit ACL plugin package (1.0.0)
+* Mon Jan 23 2017 Rafael Gonzalez (rafael.gonzalezfuentetaja@telefonica.com) 1.0.0-0.0
+- Initial lagger/goldrush plugin package (1.0.0)
