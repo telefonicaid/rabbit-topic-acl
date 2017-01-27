@@ -86,9 +86,3 @@ rpmbuild -ba ${RPM_BASE_DIR}/SPECS/rabbitmq_topic_acl.spec \
     --define "_product_release ${PRODUCT_RELEASE}" \
     --define "_rabbitmq_version ${RABBITMQ_VERSION}"
 
-rpmbuild -ba ${RPM_BASE_DIR}/SPECS/rabbitmq_lager_plugin.spec \
-    --define "_srcdir ${BASE_DIR}/plugins" \
-    --define "_project_user root" \
-    --define "_topdir ${RPM_BASE_DIR}" \
-    --define "_rabbitmq_version ${RABBITMQ_VERSION}"
-

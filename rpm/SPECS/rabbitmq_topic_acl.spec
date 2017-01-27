@@ -1,7 +1,7 @@
 
 
 Summary:   RabbitMQ Topic ACL Authorization plugin
-Name:      rabbitmq-topic-acl-plugin
+Name:      rabbitmq-%{_rabbitmq_version}-topic-acl-plugin
 Version:   %{_product_version}
 Release:   %{_product_release}
 License:   AGPLv3
