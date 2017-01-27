@@ -51,7 +51,7 @@ end_per_suite(_Config) ->
 init_per_testcase(_, Config) ->
   {ok, _} = aclstore_worker:start_link(),
   {ok, _} = aclenforce_worker:start_link(),
-  aclstore:add_permission("janedoe", "/root/*", write),
+  aclstore:add_permission("janedoe", "/root/+", write),
   aclstore:add_permission("johndoe", "/root/messages", read),
   aclstore:add_permission("johndoe", "/root/issues", readwrite),
   Config.

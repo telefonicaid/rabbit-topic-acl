@@ -31,18 +31,22 @@
 -include_lib("amqp_client/include/amqp_client.hrl").
 -behaviour(supervisor).
 
--export([start_link/0, init/1]).
+-export([start_link/0, init/1, get_credentials/0]).
 
-create_default_queues() ->
+get_credentials() ->
   {ok, Admin} = case application:get_env(rabbitmq_topic_acl, acladmin) of
                   {ok, Value} -> {ok, Value};
                   _ -> {ok, <<"guest">>}
                 end,
 
-  {ok, Password} = case application:get_env(rabbitmq_topic_acli, aclpassword) of
+  {ok, Password} = case application:get_env(rabbitmq_topic_acl, aclpassword) of
                      {ok, Returnedpass} -> {ok, Returnedpass};
                      _ -> {ok, <<"guest">>}
                    end,
+  {Admin, Password}.
+
+create_default_queues() ->
+  {Admin, Password} = get_credentials(),
 
   {ok, Connection} = amqp_connection:start(#amqp_params_direct{
     username = Admin,

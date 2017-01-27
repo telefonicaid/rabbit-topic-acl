@@ -76,7 +76,21 @@ There are two ways of managing the ACL DB contents:
 
 ### <a name="configuration" >Configuration
 
-The ACL Plugin can be configured through the use of environment variables in the appication file, `rabbitmq_topic_acl.app`.
+The ACL Plugin can be configured through the use of environment variables. Those variables can be changed in two ways:
+
+* Using the application file, `rabbitmq_topic_acl.app`.
+* Adding an entry to the `rabbitmq.config` with name `rabbitmq_topic_acl`, as in the following example:
+
+```
+[
+  {rabbit, []},
+  {rabbitmq_topic_acl,
+    [{acladmin, <<"journalist">>},
+     {aclpassword, <<"password">>}]
+  }
+].
+```
+
 The following table shows the accepted variables and their meaning and default values:
 
 
@@ -159,10 +173,10 @@ Executing the permission list command again should give the following result:
 
 ```
 [
-{"audience",read,"news/categories/*"}
-,{"editor",read,"news/categories/*"}
+{"audience",read,"news/categories/+"}
+,{"editor",read,"news/categories/+"}
 ,{"editor",readwrite,"news/events`"}
-,{"journalist",readwrite,"news/categories/*"}
+,{"journalist",readwrite,"news/categories/+"}
 ,{"journalist",read,"news/events`"}
 ]
 ```
@@ -293,7 +307,7 @@ instead of an Erlang string, so the `"global"` user could be created and will di
 For this plugin's shake, resources (represented by routing keys) will be defined as strings, possible separated by the
 `/` character. Only alphanumerical characters are allowed in the routing keys. Each substring between separation characters
 represents a resource level. Resource patterns are resource strings where some resource levels may be replaced by the
-`*` wildcard. A resource pattern string `/level1/level2/.../levelN/#` terminated in the `#` wildcard will match with all
+`+` wildcard. A resource pattern string `/level1/level2/.../levelN/#` terminated in the `#` wildcard will match with all
 resources containing the prefix `/level1/level2/.../levelN/`.
 
 The following table shows the meaning of each permission type
