@@ -76,7 +76,21 @@ There are two ways of managing the ACL DB contents:
 
 ### <a name="configuration" >Configuration
 
-The ACL Plugin can be configured through the use of environment variables in the appication file, `rabbitmq_topic_acl.app`.
+The ACL Plugin can be configured through the use of environment variables. Those variables can be changed in two ways:
+
+* Using the application file, `rabbitmq_topic_acl.app`.
+* Adding an entry to the `rabbitmq.config` with name `rabbitmq_topic_acl`, as in the following example:
+
+```
+[
+  {rabbit, []},
+  {rabbitmq_topic_acl,
+    [{acladmin, <<"journalist">>},
+     {aclpassword, <<"password">>}]
+  }
+].
+```
+
 The following table shows the accepted variables and their meaning and default values:
 
 
