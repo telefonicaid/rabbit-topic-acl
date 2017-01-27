@@ -264,6 +264,53 @@ mosquitto_pub -d -u editor -P password -t "news/events" -m "Cover the apocalypsi
 You should see that the message arrives only to the `journalist` user, as the `audience` user has no permissions in that
 topic.
 
+#### Example 3
+
+This example will show an scenario that combines AMQP and MQTT, for both incoming and outgoing messages, including
+multiple consumers for the AMQP Queues, as an example of an High Availability scenario.
+
+The setup will be the following:
+
+- Audience will consist of MQTT Clients, listening to the "news/categories/sports", independent of each other.
+- Journalists will be AMQP consumers and producers, but, in order to split the event coverage, all of them will listen
+in the same queue to the Routing Key "news/events", while publishing news to "news/categories/sports".
+- The editor will be an MQTT Client, publishing coverage requests to "news/events".
+
+User and ACL setup will be taken from the Example 2 section (refer to it for details). The first step will be to setup
+the audience listeners. To do so, open two terminal windows and execute the following statement in each one:
+```
+mosquitto_sub -u audience -P password -t "news/categories/sports"
+```
+
+Next step consists on sending an AMQP message from the journalists to the MQTT audience listeners. Now, in other terminal,
+se the following command:
+```
+./acltool.js publish -U journalist -p password amq.topic "news.categories.sports" "a small duck wins the heavy weights international championship by points"
+```
+This message should arrive to all the subscribers to that MQTT topic, so you should see the message appearing in both
+audience terminals. In this command you may notice two things:
+
+* The exchange used to publish the message was `amq.topic`. This is because that exchange is the default one used by
+the MQTT plugin. Whenever a new message arrives to the MQTT port of RabbitMQ, it's rerouted to that exchange, so other
+consumers wanting to interact with the MQTT API should do it through that exchange. That's also the case for queues
+listening in the MQTT interface.
+
+* The topic we used was sepparated by the `.` character, while the listeners were bound to the same topic sepparated with
+the `/` character. That's because the default translation the MQTT plugin does to every routing key coming from the MQTT
+plugin.
+
+Next step is to listen to new events to cover by the journalists. In order to do so, open two new
+terminals and use the following command in each one of them, to have two journalists listening to the events topic:
+```
+./acltool.js listen -U journalist -P password amq.topic "news.events" coverage
+```
+Now, we can try publishing a new event in the `news.events` topic, and the message should only arrive to one of the
+journalist's queues:
+```
+mosquitto_pub -d -u editor -P password -t "news/events" -m "Cover the apocalypsis, please"
+```
+Trying multiple times, we should see how the messages are being split in a round-robin fashion between both journalists.
+
 ## <a name="development"/> Development
 ### Overview
 
