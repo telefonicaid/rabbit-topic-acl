@@ -1,6 +1,6 @@
 # RPM Generation
 
-RPM spec to build a package installing the rabbitmq-topic-acl plugin and its dependencies, namely 
+RPM spec to build a package installing the `rabbitmq-topic-acl` plugin and its dependencies, namely 
 lagger (for logging purposes) and goldrush (lager dependency).
 
 As with the plug-ins shipped with the core product, the generated RPM will not 
@@ -8,7 +8,7 @@ enable the installed plugins. You should do it explicitely by issuing the follow
 
 ```
 sudo rabbitmq-plugins enable lager
-sudo rabbitmq-plugins enable rabbitmq_topic_acl enable
+sudo rabbitmq-plugins enable rabbitmq_topic_acl
 ```
 
 # Usage
