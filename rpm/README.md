@@ -34,9 +34,9 @@ by automated tools managing a Git repository like Jenkins.
 
 # Warning.
 
-This package is only valid for RabbitMQ version 3.6.6
+This package is only valid for RabbitMQ version ***3.6.6***
 
-As stated in the [RabbitMQ website](https://www.rabbitmq.com/community-plugins.html):
+As stated in the [RabbitMQ comminity plugins page](https://www.rabbitmq.com/community-plugins.html):
 ```
 [...] because the plugins directory changes between versions, 
 any third party plugins will need to be copied to the new directory. 
