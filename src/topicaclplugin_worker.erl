@@ -46,9 +46,11 @@ start_link() ->
   gen_server:start_link({global, ?MODULE}, ?MODULE, [], []).
 
 init([]) ->
+  {Admin, Guest} = rabbit_topic_acl_sup:get_credentials(),
+
   {ok, Connection} = amqp_connection:start(#amqp_params_direct{
-    username = <<"guest">>,
-    password = <<"guest">>
+    username = Admin,
+    password = Guest
   }),
   {ok, Channel} = amqp_connection:open_channel(Connection),
   {ok, Exchange} = application:get_env(rabbitmq_topic_acl, exchange),
