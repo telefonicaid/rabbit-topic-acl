@@ -82,7 +82,7 @@ rm -rf $RPM_BUILD_ROOT
 # Files to add to the RPM
 # -------------------------------------------------------------------------------------------- #
 %files
-%defattr(755,%{_project_user},%{_project_user},755)
+%defattr(644,%{_project_user},%{_project_user},755)
 # Copy all files under the _install_dir folder
 %{_install_dir}
 
