@@ -18,6 +18,7 @@ It should be invoked as
 git clone https://github.com/telefonicaid/rabbit-topic-acl
 cd rabbit-topic-acl/rpm
 ./create_rpm -v <version tag> -r <release tag>
+```
 
 where the version tag has the form X.Y.Z and 
 should match the version specified in the `vsn` tag
@@ -30,15 +31,12 @@ Both the version and release tags can be set (with the help of auxiliar scripts)
 by automated tools managing a Git repository 
 like Jenkins.
 
-```
-
-
 
 # Warning.
 
 This package is only valid for RabbitMQ version 3.6.6
 
-As stated in the RabbitMQ website:
+As stated in the (RabbitMQ website)[https://www.rabbitmq.com/community-plugins.html]:
 ```
 [...] because the plugins directory changes between versions, 
 any third party plugins will need to be copied to the new directory. 
