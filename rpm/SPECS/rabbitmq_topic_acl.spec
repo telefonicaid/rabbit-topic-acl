@@ -43,7 +43,13 @@ rm -Rf $RPM_BUILD_ROOT && mkdir -p $RPM_BUILD_ROOT
 [ -d %{_build_root_project} ] || mkdir -p %{_build_root_project}
 
 # Copy all from src to rpm/BUILD
-cp %{_srcdir}/%{_plugin_name}-%{_product_version}.ez %{_build_root_project}
+if [ ! -f  %{_srcdir}/%{_plugin_name}-%{_product_version}.ez ]
+then
+	found=$(ls %{_srcdir}/%{_plugin_name}-*.ez)
+	echo "[WARN] Plugin not found with version %{_product_version}"
+	echo "[WARN] Found $found instead"
+fi
+cp %{_srcdir}/%{_plugin_name}-*.ez %{_build_root_project}
 cp %{_srcdir}/lager-*.ez %{_build_root_project}
 cp %{_srcdir}/goldrush-*.ez %{_build_root_project}
 
