@@ -127,7 +127,7 @@ if [ $1 -gt 1 ]
 then
     echo "[INFO] upgrading package"
     echo "[INFO] disabling previous RabbitMQ Topic ACL Plugin before upgrade"
-    /usr/sbin/rabbitmq-plugins disable %{_plugin_name} &&  echo "[ERROR] enabling plugin yielded $? status code"
+    umask 0022 && /usr/sbin/rabbitmq-plugins disable %{_plugin_name} &&  echo "[ERROR] enabling plugin yielded $? status code"
     touch %{_localstatedir}/lib/rpm-state/%{_plugin_name}/upgrade.mark
 fi
 exit 0
