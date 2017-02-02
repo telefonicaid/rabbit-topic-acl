@@ -114,6 +114,11 @@ rm -rf $RPM_BUILD_ROOT
 #    %posttrans of new package
 # ==============================================================================================
 
+# In our systems the default umask is very restrictive. 
+# Executing /usr/sbin/rabbitmq-plugins updates
+# updates a status file with rabbitmq user 
+# hence we need needs a temporary umask value
+
 # -------------------------------------------------------------------------------------------- #
 # pre-install scriptlet:
 # -------------------------------------------------------------------------------------------- #
@@ -127,7 +132,7 @@ if [ $1 -gt 1 ]
 then
     echo "[INFO] upgrading package"
     echo "[INFO] disabling previous RabbitMQ Topic ACL Plugin before upgrade"
-    umask 0022 && /usr/sbin/rabbitmq-plugins disable %{_plugin_name} &&  echo "[ERROR] enabling plugin yielded $? status code"
+    umask 0022 && /usr/sbin/rabbitmq-plugins disable %{_plugin_name}
     touch %{_localstatedir}/lib/rpm-state/%{_plugin_name}/upgrade.mark
 fi
 exit 0
@@ -142,9 +147,9 @@ if [ $1 -eq 1 ]
 then
     echo "[INFO] first time install"
     echo "[INFO] enabling Lager Plugin"
-    umask 0022 && /usr/sbin/rabbitmq-plugins enable lager &&  echo "[ERROR] enabling lager plugin yielded $? status code"
+    umask 0022 && /usr/sbin/rabbitmq-plugins enable lager
     echo "[INFO] enabling RabbitMQ Topic ACL Plugin"
-    umask 0022 && /usr/sbin/rabbitmq-plugins enable %{_plugin_name} &&  echo "[ERROR] enabling plugin yielded $? status code"
+    umask 0022 && /usr/sbin/rabbitmq-plugins enable %{_plugin_name}
 fi
 exit 0
 
@@ -166,12 +171,12 @@ fi
 if [ $upgrade -eq 1 ]
 then
     echo "[INFO] enabling upgraded RabbitMQ Topic ACL Plugin"
-    umask 0022 && /usr/sbin/rabbitmq-plugins enable %{_plugin_name} &&  echo "[ERROR] enabling plugin yielded $? status code"
+    umask 0022 && /usr/sbin/rabbitmq-plugins enable %{_plugin_name}
 else
     echo "[INFO] disabling Lager Plugin"
-    umask 0022 && /usr/sbin/rabbitmq-plugins disable lager &&  echo "[ERROR] enabling lager plugin yielded $? status code"
+    umask 0022 && /usr/sbin/rabbitmq-plugins disable lager
     echo "[INFO] disabling RabbitMQ Topic ACL Plugin"
-    umask 0022 && /usr/sbin/rabbitmq-plugins disable %{_plugin_name} &&  echo "[ERROR] disabling plugin yielded $? status code"
+    umask 0022 && /usr/sbin/rabbitmq-plugins disable %{_plugin_name}
 fi
 exit 0
 
