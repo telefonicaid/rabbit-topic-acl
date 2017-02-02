@@ -142,9 +142,9 @@ if [ $1 -eq 1 ]
 then
     echo "[INFO] first time install"
     echo "[INFO] enabling Lager Plugin"
-    /usr/sbin/rabbitmq-plugins enable lager &&  echo "[ERROR] enabling lager plugin yielded $? status code"
+    umask 0022 && /usr/sbin/rabbitmq-plugins enable lager &&  echo "[ERROR] enabling lager plugin yielded $? status code"
     echo "[INFO] enabling RabbitMQ Topic ACL Plugin"
-    /usr/sbin/rabbitmq-plugins enable %{_plugin_name} &&  echo "[ERROR] enabling plugin yielded $? status code"
+    umask 0022 && /usr/sbin/rabbitmq-plugins enable %{_plugin_name} &&  echo "[ERROR] enabling plugin yielded $? status code"
 fi
 exit 0
 
@@ -166,12 +166,12 @@ fi
 if [ $upgrade -eq 1 ]
 then
     echo "[INFO] enabling upgraded RabbitMQ Topic ACL Plugin"
-    /usr/sbin/rabbitmq-plugins enable %{_plugin_name} &&  echo "[ERROR] enabling plugin yielded $? status code"
+    umask 0022 && /usr/sbin/rabbitmq-plugins enable %{_plugin_name} &&  echo "[ERROR] enabling plugin yielded $? status code"
 else
     echo "[INFO] disabling Lager Plugin"
-    /usr/sbin/rabbitmq-plugins disable lager &&  echo "[ERROR] enabling lager plugin yielded $? status code"
+    umask 0022 && /usr/sbin/rabbitmq-plugins disable lager &&  echo "[ERROR] enabling lager plugin yielded $? status code"
     echo "[INFO] disabling RabbitMQ Topic ACL Plugin"
-    /usr/sbin/rabbitmq-plugins disable %{_plugin_name} &&  echo "[ERROR] disabling plugin yielded $? status code"
+    umask 0022 && /usr/sbin/rabbitmq-plugins disable %{_plugin_name} &&  echo "[ERROR] disabling plugin yielded $? status code"
 fi
 exit 0
 
