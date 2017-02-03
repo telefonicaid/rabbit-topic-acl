@@ -132,7 +132,7 @@ if [ $1 -gt 1 ]
 then
     echo "[INFO] upgrading package"
     echo "[INFO] disabling previous RabbitMQ Topic ACL Plugin before upgrade"
-    umask 0022 && /usr/sbin/rabbitmq-plugins disable %{_plugin_name}
+    umask 0022 && /usr/sbin/rabbitmq-plugins disable %{_plugin_name} &> /tmp/%{_plugin_name}_install.log
     touch %{_localstatedir}/lib/rpm-state/%{_plugin_name}/upgrade.mark
 fi
 exit 0
@@ -147,9 +147,9 @@ if [ $1 -eq 1 ]
 then
     echo "[INFO] first time install"
     echo "[INFO] enabling Lager Plugin"
-    umask 0022 && /usr/sbin/rabbitmq-plugins enable lager
+    umask 0022 && /usr/sbin/rabbitmq-plugins enable lager  &> /tmp/%{_plugin_name}_install.log
     echo "[INFO] enabling RabbitMQ Topic ACL Plugin"
-    umask 0022 && /usr/sbin/rabbitmq-plugins enable %{_plugin_name}
+    umask 0022 && /usr/sbin/rabbitmq-plugins enable %{_plugin_name} &>> /tmp/%{_plugin_name}_install.log
 fi
 exit 0
 
@@ -171,12 +171,12 @@ fi
 if [ $upgrade -eq 1 ]
 then
     echo "[INFO] enabling upgraded RabbitMQ Topic ACL Plugin"
-    umask 0022 && /usr/sbin/rabbitmq-plugins enable %{_plugin_name}
+    umask 0022 && /usr/sbin/rabbitmq-plugins enable %{_plugin_name}  &>> /tmp/%{_plugin_name}_install.log
 else
     echo "[INFO] disabling Lager Plugin"
-    umask 0022 && /usr/sbin/rabbitmq-plugins disable lager
+    umask 0022 && /usr/sbin/rabbitmq-plugins disable lager  &>> /tmp/%{_plugin_name}_install.log
     echo "[INFO] disabling RabbitMQ Topic ACL Plugin"
-    umask 0022 && /usr/sbin/rabbitmq-plugins disable %{_plugin_name}
+    umask 0022 && /usr/sbin/rabbitmq-plugins disable %{_plugin_name}  &>> /tmp/%{_plugin_name}_install.log
 fi
 exit 0
 
