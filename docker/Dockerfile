@@ -42,9 +42,8 @@ RUN \
     make dist && \
     cp plugins/goldrush-*.ez /usr/lib/rabbitmq/lib/rabbitmq_server-0.0.0/plugins/ && \
     cp plugins/lager-*ez /usr/lib/rabbitmq/lib/rabbitmq_server-0.0.0/plugins/ && \
-    cd ..
-
-RUN /usr/lib/rabbitmq/bin/rabbitmq-plugins enable lager
+    cd .. && \
+    /usr/lib/rabbitmq/bin/rabbitmq-plugins enable lager
 
 #
 # Install RabbitMQ Topic ACL plugin
@@ -60,12 +59,8 @@ RUN \
     cd ${dir}/${repo}-${tag} && \
     make dist && \
     cp plugins/rabbitmq_topic_acl-*.ez /usr/lib/rabbitmq/lib/rabbitmq_server-0.0.0/plugins/ && \
-    cd ..
-    
-RUN /usr/lib/rabbitmq/bin/rabbitmq-plugins enable rabbitmq_topic_acl
-
-
-
+    cd .. && \
+    /usr/lib/rabbitmq/bin/rabbitmq-plugins enable rabbitmq_topic_acl
 
 ADD run-rabbitmq-server.sh /tmp/rabbitmq/run-rabbitmq-server.sh
 
@@ -74,10 +69,6 @@ ADD run-rabbitmq-server.sh /tmp/rabbitmq/run-rabbitmq-server.sh
 RUN chown -R 1001:0 /etc/rabbitmq && chown -R 1001:0 /var/lib/rabbitmq  && chmod -R ug+rw /etc/rabbitmq && \
     chmod -R ug+rw /var/lib/rabbitmq && find /etc/rabbitmq -type d -exec chmod g+x {} + && \
     find /var/lib/rabbitmq -type d -exec chmod g+x {} +
-
-
-
-
 
 # Set  workdir
 WORKDIR /var/lib/rabbitmq
@@ -98,15 +89,6 @@ ADD passwd.template /tmp/rabbitmq/passwd.template
 # Set permissions for scripts directory
 RUN chown -R 1001:0 /tmp/rabbitmq && chmod -R ug+rwx /tmp/rabbitmq && \
     find /tmp/rabbitmq -type d -exec chmod g+x {} +
-
-
-
-
-
-
-
-
-
 
 USER 1001
 
