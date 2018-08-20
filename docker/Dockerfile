@@ -37,7 +37,7 @@ RUN set -eux; \
         \
 # verify the signature
         export GNUPGHOME="$(mktemp -d)"; \
-        gpg --keyserver ha.pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4; \
+        gpg --keyserver ipv4.pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4; \
         gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu; \
         command -v gpgconf && gpgconf --kill all || :; \
         rm -rf "$GNUPGHOME" /usr/local/bin/gosu.asc; \
