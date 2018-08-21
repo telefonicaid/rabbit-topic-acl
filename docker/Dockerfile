@@ -35,9 +35,17 @@ RUN set -eux; \
         wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch"; \
         wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch.asc"; \
         \
-# verify the signature
+        # verify the signature
+        key='B42F6819007F00F88E364FD4036A9C25BF357DD4'; \
         export GNUPGHOME="$(mktemp -d)"; \
-        gpg --keyserver ipv4.pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4; \
+        for keyserver in $(shuf -e \
+                        ha.pool.sks-keyservers.net \
+                        hkp://p80.pool.sks-keyservers.net:80 \
+                        keyserver.ubuntu.com \
+                        hkp://keyserver.ubuntu.com:80 \
+                        pgp.mit.edu) ; do \
+                gpg --keyserver $keyserver --recv-keys "$key" && break || true ; \
+        done && \
         gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu; \
         command -v gpgconf && gpgconf --kill all || :; \
         rm -rf "$GNUPGHOME" /usr/local/bin/gosu.asc; \
