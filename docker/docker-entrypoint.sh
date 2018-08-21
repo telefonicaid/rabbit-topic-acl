@@ -89,7 +89,6 @@ allConfigKeys=(
         "${mqttConfigKeys[@]/#/mqtt_}"
 )
 
-
 declare -A configDefaults=(
         [management_ssl_fail_if_no_peer_cert]='false'
         [management_ssl_verify]='verify_none'
@@ -99,6 +98,7 @@ declare -A configDefaults=(
 
         [mqtt_default_user]='guest'
         [mqtt_default_pass]='guest'
+
         [mqtt_vhost]='/'
         [mqtt_exchange]='amq.topic'
 )
@@ -254,6 +254,7 @@ rabbit_env_config() {
                 case "$prefix" in
                         ssl) key="ssl_options.$key" ;;
                         management_ssl) key="management.listener.ssl_opts.$key" ;;
+                        mqtt) key="mqtt.$key" ;;
                 esac
 
                 local val="${!var:-}"
