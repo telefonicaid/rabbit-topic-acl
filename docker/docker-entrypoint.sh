@@ -41,6 +41,8 @@ fi
 : "${RABBITMQ_MANAGEMENT_SSL_CERTFILE:=$RABBITMQ_SSL_CERTFILE}"
 : "${RABBITMQ_MANAGEMENT_SSL_KEYFILE:=$RABBITMQ_SSL_KEYFILE}"
 
+
+
 # Allowed env vars that will be read from mounted files (i.e. Docker Secrets):
 fileEnvKeys=(
         default_user
@@ -66,6 +68,12 @@ rabbitConfigKeys=(
         hipe_compile
         vm_memory_high_watermark
 )
+mqttConfigKeys=(
+        vhost
+        exchange
+        default_user
+        default_pass
+)
 fileConfigKeys=(
         management_ssl_cacertfile
         management_ssl_certfile
@@ -78,6 +86,7 @@ allConfigKeys=(
         "${managementConfigKeys[@]/#/management_}"
         "${rabbitConfigKeys[@]}"
         "${sslConfigKeys[@]/#/ssl_}"
+        "${mqttConfigKeys[@]/#/mqtt_}"
 )
 
 declare -A configDefaults=(
@@ -239,6 +248,7 @@ rabbit_env_config() {
                 case "$prefix" in
                         ssl) key="ssl_options.$key" ;;
                         management_ssl) key="management.listener.ssl_opts.$key" ;;
+                        mqtt) key="mqtt.$key" ;;
                 esac
 
                 local val="${!var:-}"
@@ -360,7 +370,15 @@ if [ "$1" = 'rabbitmq-server' ] && [ "$shouldWriteConfig" ]; then
                         rabbit_set_config 'management.load_definitions' "$managementDefinitionsFile"
                 fi
         fi
+
+        # if mqtt plugin is installed, generate config for it
+        # https://www.rabbitmq.com/mqtt.html#config
+        if [ "$(rabbitmq-plugins list -m -e rabbitmq_mqtt)" ]; then
+            rabbit_env_config 'mqtt' "${mqttConfigKeys[@]}"
+        fi
+
 fi
+
 
 combinedSsl='/tmp/combined.pem'
 if [ "$haveSslConfig" ] && [[ "$1" == rabbitmq* ]] && [ ! -f "$combinedSsl" ]; then
