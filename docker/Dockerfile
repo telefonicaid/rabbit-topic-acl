@@ -162,6 +162,7 @@ RUN \
     /usr/lib/rabbitmq/bin/rabbitmq-plugins enable rabbitmq_mqtt && \
     wget https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb && \
     dpkg -i erlang-solutions_1.0_all.deb && \
+    rm erlang-solutions_1.0_all.deb && \
     apt-get update && \
     apt-get install elixir
 
@@ -178,14 +179,19 @@ RUN \
     curl -s --insecure -L "${url}" | tar zxvf - -C ${dir} && \
     cd ${dir}/${repo}-${tag} && \
     make dist && \
-    cp plugins/rabbitmq_topic_acl-*.ez /plugins && \    
-    cd ..     
+    cp plugins/rabbitmq_topic_acl-*.ez /plugins && \
+    cd ..  && \
+    rm -fR $dir && \
+    apt-get purge -y --auto-remove ca-certificates wget
+
+
 
 RUN /usr/lib/rabbitmq/bin/rabbitmq-plugins enable rabbitmq_topic_acl
 
-COPY docker-entrypoint.sh /usr/local/bin/
-RUN ln -s usr/local/bin/docker-entrypoint.sh / # backwards compat
-ENTRYPOINT ["docker-entrypoint.sh"]
+#COPY docker-entrypoint.sh /usr/local/bin/
+COPY docker-entrypoint.sh /
+#RUN ln -s /usr/local/bin/docker-entrypoint.sh / # backwards compat
+ENTRYPOINT ["/docker-entrypoint.sh"]
 
 # 5672 rabbitmq-server - amqp port
 # 15672 rabbitmq-server - for management plugin
