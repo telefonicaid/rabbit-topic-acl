@@ -1,43 +1,170 @@
-FROM debian:stretch
+FROM debian:stretch-slim
 
-MAINTAINER IoT team
+RUN set -eux; \
+        apt-get update; \
+        apt-get install -y \
+                gnupg \
+                dirmngr \
+                curl \
+                build-essential \
+                make \
+                rpm \
+                g++ \
+                zip \
+                git \
+                python \
+        ; \
+        rm -rf /var/lib/apt/lists/*
 
-# Install the basic requirements
-RUN \
-    # Install dependencies
-    apt-get update && apt-get install -y curl pwgen wget logrotate gettext sudo libnss-wrapper gnupg
+# add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
+RUN groupadd -r rabbitmq && useradd -r -d /var/lib/rabbitmq -m -g rabbitmq rabbitmq
 
+# grab gosu for easy step-down from root
+ENV GOSU_VERSION 1.10
+RUN set -eux; \
+        \
+        fetchDeps=' \
+                ca-certificates \
+                wget \
+        '; \
+        apt-get update; \
+        apt-get install -y $fetchDeps; \
+        rm -rf /var/lib/apt/lists/*; \
+        \
+        dpkgArch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
+        wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch"; \
+        wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch.asc"; \
+        \
+        # verify the signature
+        key='B42F6819007F00F88E364FD4036A9C25BF357DD4'; \
+        export GNUPGHOME="$(mktemp -d)"; \
+        for keyserver in $(shuf -e \
+                        ha.pool.sks-keyservers.net \
+                        hkp://p80.pool.sks-keyservers.net:80 \
+                        keyserver.ubuntu.com \
+                        hkp://keyserver.ubuntu.com:80 \
+                        pgp.mit.edu) ; do \
+                gpg --keyserver $keyserver --recv-keys "$key" && break || true ; \
+        done && \
+        gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu; \
+        command -v gpgconf && gpgconf --kill all || :; \
+        rm -rf "$GNUPGHOME" /usr/local/bin/gosu.asc; \
+        \
+        chmod +x /usr/local/bin/gosu; \
+# verify that the binary works
+        gosu nobody true;
+        #\
+        #apt-get purge -y --auto-remove $fetchDeps
 
-# Setup rabbitmq-server
-RUN useradd -d /var/lib/rabbitmq -u 1001 -o -g 0 rabbitmq && \
-    apt-get install -y rabbitmq-server
+# RabbitMQ 3.6.15+ requires Erlang 19.3+ (and Stretch only has 19.2); https://www.rabbitmq.com/which-erlang.html
+# so we'll pull Erlang from Buster instead (not using Erlang Solutions since their multiarch support is extremely limited)
+RUN set -eux; \
+# add buster sources.list
+        sed 's/stretch/buster/g' /etc/apt/sources.list \
+                | tee /etc/apt/sources.list.d/buster.list; \
+# update apt-preferences such that we get only erlang* from buster (and erlang* only from buster)
+        { \
+                echo 'Package: *'; \
+                echo 'Pin: release n=buster*'; \
+                echo 'Pin-Priority: 1'; \
+                echo; \
+                echo 'Package: erlang*'; \
+                echo 'Pin: release n=buster*'; \
+                echo 'Pin-Priority: 999'; \
+                echo; \
+                echo 'Package: erlang*'; \
+                echo 'Pin: release n=stretch*'; \
+                echo 'Pin-Priority: -10'; \
+        } | tee /etc/apt/preferences.d/buster-erlang
 
-# Send the logs to stdout
+# install Erlang
+RUN set -eux; \
+        apt-get update; \
+# "erlang-base-hipe" is optional (and only supported on a few arches)
+# so, only install it if it's available for our current arch
+        if apt-cache show erlang-base-hipe 2>/dev/null | grep -q 'Package: erlang-base-hipe'; then \
+                apt-get install -y \
+                        erlang-base-hipe \
+                ; \
+        fi; \
+# we start with "erlang-base-hipe" because it and "erlang-base" (non-hipe) are exclusive
+        apt-get install -y --no-install-recommends \
+                erlang-asn1 \
+                erlang-crypto \
+                erlang-eldap \
+                erlang-inets \
+                erlang-mnesia \
+                erlang-nox \
+                erlang-os-mon \
+                erlang-public-key \
+                erlang-ssl \
+                erlang-xmerl \
+                erlang-dev \
+                erlang-src \
+        ; \
+        rm -rf /var/lib/apt/lists/*
+
+# get logs to stdout (thanks @dumbbell for pushing this upstream! :D)
 ENV RABBITMQ_LOGS=- RABBITMQ_SASL_LOGS=-
+# https://github.com/rabbitmq/rabbitmq-server/commit/53af45bf9a162dec849407d114041aad3d84feaf
 
-# Create directory for scripts and passwd template
-RUN mkdir -p /tmp/rabbitmq
+# /usr/sbin/rabbitmq-server has some irritating behavior, and only exists to "su - rabbitmq /usr/lib/rabbitmq/bin/rabbitmq-server ..."
+ENV PATH /usr/lib/rabbitmq/bin:$PATH
 
-RUN /usr/lib/rabbitmq/bin/rabbitmq-plugins enable rabbitmq_management
-RUN /usr/lib/rabbitmq/bin/rabbitmq-plugins enable rabbitmq_mqtt
+# gpg: key 6026DFCA: public key "RabbitMQ Release Signing Key <info@rabbitmq.com>" imported
+ENV RABBITMQ_GPG_KEY 0A9AF2115F4687BD29803A206B73A36E6026DFCA
+
+ENV RABBITMQ_VERSION 3.7.7
+ENV RABBITMQ_GITHUB_TAG v3.7.7
+ENV RABBITMQ_DEBIAN_VERSION 3.7.7-1
+
+RUN set -eux; \
+        \
+        apt-get update; \
+        apt-get install -y --no-install-recommends ca-certificates wget; \
+        \
+        wget -O rabbitmq-server.deb.asc "https://github.com/rabbitmq/rabbitmq-server/releases/download/$RABBITMQ_GITHUB_TAG/rabbitmq-server_${RABBITMQ_DEBIAN_VERSION}_all.deb.asc"; \
+        wget -O rabbitmq-server.deb     "https://github.com/rabbitmq/rabbitmq-server/releases/download/$RABBITMQ_GITHUB_TAG/rabbitmq-server_${RABBITMQ_DEBIAN_VERSION}_all.deb"; \
+        \
+        #apt-get purge -y --auto-remove ca-certificates wget; \
+        \
+        export GNUPGHOME="$(mktemp -d)"; \
+        gpg --keyserver ha.pool.sks-keyservers.net --recv-keys "$RABBITMQ_GPG_KEY"; \
+        gpg --batch --verify rabbitmq-server.deb.asc rabbitmq-server.deb; \
+        command -v gpgconf && gpgconf --kill all || :; \
+        rm -rf "$GNUPGHOME"; \
+        \
+        apt install -y --no-install-recommends ./rabbitmq-server.deb; \
+        dpkg -l | grep rabbitmq-server; \
+        rm -f rabbitmq-server.deb*; \
+        \
+        rm -rf /var/lib/apt/lists/*
+
+# warning: the VM is running with native name encoding of latin1 which may cause Elixir to malfunction as it expects utf8. Please ensure your locale is set to UTF-8 (which can be verified by running "locale" in your shell)
+ENV LANG C.UTF-8
+
+# set home so that any `--user` knows where to put the erlang cookie
+ENV HOME /var/lib/rabbitmq
+
+RUN mkdir -p /var/lib/rabbitmq /etc/rabbitmq \
+        && chown -R rabbitmq:rabbitmq /var/lib/rabbitmq /etc/rabbitmq \
+        && chmod -R 777 /var/lib/rabbitmq /etc/rabbitmq
+VOLUME /var/lib/rabbitmq
+
+# add a symlink to the .erlang.cookie in /root so we can "docker exec rabbitmqctl ..." without gosu
+RUN ln -sf /var/lib/rabbitmq/.erlang.cookie /root/
+
+RUN ln -sf "/usr/lib/rabbitmq/lib/rabbitmq_server-$RABBITMQ_VERSION/plugins" /plugins
+
 
 RUN \
-   wget https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb && \
-   dpkg -i erlang-solutions_1.0_all.deb && \
-   apt-get update
-
-#
-# Install RabbitMQ larger plugin
-RUN \
-    apt-get install -y build-essential elixir erlang erlang-dev  rpm make g++ zip git && \
-    git clone https://github.com/hyperthunk/rabbitmq-lager.git && \
-    cd rabbitmq-lager && \
-    make rabbitmq-components-mk && \
-    make dist && \
-    cp plugins/goldrush-*.ez /usr/lib/rabbitmq/lib/rabbitmq_server-0.0.0/plugins/ && \
-    cp plugins/lager-*ez /usr/lib/rabbitmq/lib/rabbitmq_server-0.0.0/plugins/ && \
-    cd .. && \
-    /usr/lib/rabbitmq/bin/rabbitmq-plugins enable lager
+    /usr/lib/rabbitmq/bin/rabbitmq-plugins enable rabbitmq_management && \
+    /usr/lib/rabbitmq/bin/rabbitmq-plugins enable rabbitmq_mqtt && \
+    wget https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb && \
+    dpkg -i erlang-solutions_1.0_all.deb && \
+    rm erlang-solutions_1.0_all.deb && \
+    apt-get update && \
+    apt-get install elixir
 
 #
 # Install RabbitMQ Topic ACL plugin
@@ -47,45 +174,30 @@ RUN \
     user="telefonicaid" && \
     repo="rabbit-topic-acl" && \
     url="https://github.com/${user}/${repo}/archive/${tag}.tar.gz" && \
-    dir=/rabbit-topic-acl && \
+    dir=/tmp/rabbit-topic-acl && \
     rm -fR $dir && mkdir -p $dir && \
     curl -s --insecure -L "${url}" | tar zxvf - -C ${dir} && \
     cd ${dir}/${repo}-${tag} && \
     make dist && \
-    cp plugins/rabbitmq_topic_acl-*.ez /usr/lib/rabbitmq/lib/rabbitmq_server-0.0.0/plugins/ && \
-    cd .. && \
-    /usr/lib/rabbitmq/bin/rabbitmq-plugins enable rabbitmq_topic_acl
+    cp plugins/rabbitmq_topic_acl-*.ez /plugins && \
+    cd ..  && \
+    rm -fR $dir && \
+    apt-get purge -y --auto-remove ca-certificates wget
 
-ADD run-rabbitmq-server.sh /tmp/rabbitmq/run-rabbitmq-server.sh
 
 
-# Set permissions for openshift run
-RUN chown -R 1001:0 /etc/rabbitmq && chown -R 1001:0 /var/lib/rabbitmq  && chmod -R ug+rw /etc/rabbitmq && \
-    chmod -R ug+rw /var/lib/rabbitmq && find /etc/rabbitmq -type d -exec chmod g+x {} + && \
-    find /var/lib/rabbitmq -type d -exec chmod g+x {} +
+RUN /usr/lib/rabbitmq/bin/rabbitmq-plugins enable rabbitmq_topic_acl
 
-# Set  workdir
-WORKDIR /var/lib/rabbitmq
+#COPY docker-entrypoint.sh /usr/local/bin/
+COPY docker-entrypoint.sh /
+#RUN ln -s /usr/local/bin/docker-entrypoint.sh / # backwards compat
+ENTRYPOINT ["/docker-entrypoint.sh"]
 
-# 
-# expose some ports
-#
 # 5672 rabbitmq-server - amqp port
 # 15672 rabbitmq-server - for management plugin
 # 1883 rabbitmq-server - for mqtt plugin
 # 4369 epmd - for clustering
 # 25672 rabbitmq-server - for clustering
-EXPOSE 5672 15672 1883 4369 25672
+EXPOSE 5671 5672 15672 1883 4369 25672
 
-# Add passwd template file for nss_wrapper
-ADD passwd.template /tmp/rabbitmq/passwd.template
-
-# Set permissions for scripts directory
-RUN chown -R 1001:0 /tmp/rabbitmq && chmod -R ug+rwx /tmp/rabbitmq && \
-    find /tmp/rabbitmq -type d -exec chmod g+x {} +
-
-USER 1001
-
-#
-# entrypoint/cmd for container
-CMD ["/tmp/rabbitmq/run-rabbitmq-server.sh"]
+CMD ["rabbitmq-server"]
