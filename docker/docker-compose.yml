@@ -1,8 +1,7 @@
 iot-rabbit:
   container_name: iot-rabbit
   hostname: iot-rabbit
-  #image:  telefonicaiot/rabbit-topic-acl:rabbit377
-  build: .
+  image:  telefonicaiot/rabbit-topic-acl:latest
   ports:
     - "1883:1883"
     - "5671:5671"
