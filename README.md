@@ -74,7 +74,7 @@ There are two ways of managing the ACL DB contents:
 - Through the use of [ERL commands](#aclstore_commands) from the RabbitMQ Erlang console.
 - Through the use of the [AMQP Administration API](#amqp_administration).
 
-### <a name="configuration" >Configuration
+### <a name="configuration" > Configuration
 
 The ACL Plugin can be configured through the use of environment variables. Those variables can be changed in two ways:
 
@@ -527,7 +527,7 @@ make tests
 The execution of the tests generate a `logs/` folder under the root folder, containing logs of the execution of all suites
 as well as a web version of the execution reports.
 
-### License
+### <a name="license"/> License
 
 This plugin is licensed under Affero General Public License (GPL) version 3. You can find a copy of the license in the
 repository root.
