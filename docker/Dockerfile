@@ -184,8 +184,9 @@ RUN \
     cd ${dir}/${repo}-${tag} && \
     make dist && \
     cp plugins/rabbitmq_topic_acl-*.ez /plugins && \
-    cd ..
-
+    cd .. && \
+    rm -fR $dir && \
+    apt-get purge -y --auto-remove ca-certificates wget
 
 RUN /usr/lib/rabbitmq/bin/rabbitmq-plugins enable rabbitmq_topic_acl
 
