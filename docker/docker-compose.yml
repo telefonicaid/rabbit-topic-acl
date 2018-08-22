@@ -1,19 +1,20 @@
 iot-rabbit:
   container_name: iot-rabbit
   hostname: iot-rabbit
-  image:  telefonicaiot/rabbit-topic-acl:latest
+  #image:  telefonicaiot/rabbit-topic-acl:rabbit377
+  build: .
   ports:
     - "1883:1883"
     - "5671:5671"
     - "5672:5672"
     - "4369:4369"
     - "15672:15672"
-    - "25672:25672"    
-  environment: 
-    - RABBITMQ_USER=iota
-    - RABBITMQ_PASS=iota
-    - acladmin=iota
-    - aclpassword=iota
-  log_driver: json-file
+    - "25672:25672"
+  environment:
+    - RABBITMQ_DEFAULT_USER=iota
+    - RABBITMQ_DEFAULT_PASS=iota
+    - RABBITMQ_MQTT_DEFAULT_USER=iota
+    - RABBITMQ_MQTT_DEFAULT_PASS=iota
+     log_driver: json-file
   log_opt:
     max-size: "250m"
