@@ -36,12 +36,12 @@
 get_credentials() ->
   {ok, Admin} = case application:get_env(rabbitmq_topic_acl, acladmin) of
                   {ok, Value} -> {ok, Value};
-                  _ -> {ok, default_user}
+                  _ -> {ok, application:get_env(default_user)}
                 end,
 
   {ok, Password} = case application:get_env(rabbitmq_topic_acl, aclpassword) of
                      {ok, Returnedpass} -> {ok, Returnedpass};
-                     _ -> {ok, default_pass}
+                     _ -> {ok, application:get_env(default_pass)}
                    end,
   {Admin, Password}.
 
