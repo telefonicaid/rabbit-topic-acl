@@ -43,6 +43,7 @@ get_credentials() ->
                      {ok, Returnedpass} -> {ok, Returnedpass};
                      _ -> {ok, application:get_env(default_pass)}
                    end,
+  rabbit_log:info("using credentials [~s] [~s]", [Admin , Password]),
   {Admin, Password}.
 
 create_default_queues() ->
