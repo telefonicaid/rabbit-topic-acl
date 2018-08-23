@@ -36,12 +36,12 @@
 get_credentials() ->
   {ok, Admin} = case application:get_env(rabbitmq_topic_acl, acladmin) of
                   {ok, Value} -> {ok, Value};
-                  _ -> application:get_env(default_user)
+                  _ -> {ok, <<"guest">>}
                 end,
 
   {ok, Password} = case application:get_env(rabbitmq_topic_acl, aclpassword) of
                      {ok, Returnedpass} -> {ok, Returnedpass};
-                     _ -> application:get_env(default_pass)
+                     _ -> {ok, <<"guest">>}
                    end,
   rabbit_log:info("using credentials of user [~s]", [Admin]),
   {Admin, Password}.
