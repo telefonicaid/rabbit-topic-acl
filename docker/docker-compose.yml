@@ -8,12 +8,10 @@ iot-rabbit:
     - "5672:5672"
     - "4369:4369"
     - "15672:15672"
-    - "25672:25672"    
-  environment: 
-    - RABBITMQ_USER=iota
-    - RABBITMQ_PASS=iota
-    - acladmin=iota
-    - aclpassword=iota
+    - "25672:25672"
+  environment:
+    - RABBITMQ_DEFAULT_USER=iota
+    - RABBITMQ_DEFAULT_PASS=iotapwd
   log_driver: json-file
   log_opt:
     max-size: "250m"

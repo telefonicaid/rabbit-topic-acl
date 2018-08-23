@@ -121,15 +121,19 @@ ENV RABBITMQ_DEBIAN_VERSION 3.7.7-1
 RUN set -eux; \
         \
         apt-get update; \
-        apt-get install -y --no-install-recommends ca-certificates wget; \
         \
         wget -O rabbitmq-server.deb.asc "https://github.com/rabbitmq/rabbitmq-server/releases/download/$RABBITMQ_GITHUB_TAG/rabbitmq-server_${RABBITMQ_DEBIAN_VERSION}_all.deb.asc"; \
         wget -O rabbitmq-server.deb     "https://github.com/rabbitmq/rabbitmq-server/releases/download/$RABBITMQ_GITHUB_TAG/rabbitmq-server_${RABBITMQ_DEBIAN_VERSION}_all.deb"; \
         \
-        #apt-get purge -y --auto-remove ca-certificates wget; \
-        \
         export GNUPGHOME="$(mktemp -d)"; \
-        gpg --keyserver ha.pool.sks-keyservers.net --recv-keys "$RABBITMQ_GPG_KEY"; \
+        for keyserver in $(shuf -e \
+                        ha.pool.sks-keyservers.net \
+                        hkp://p80.pool.sks-keyservers.net:80 \
+                        keyserver.ubuntu.com \
+                        hkp://keyserver.ubuntu.com:80 \
+                        pgp.mit.edu) ; do \
+                gpg --keyserver $keyserver --recv-keys "$RABBITMQ_GPG_KEY" && break || true ; \
+        done && \
         gpg --batch --verify rabbitmq-server.deb.asc rabbitmq-server.deb; \
         command -v gpgconf && gpgconf --kill all || :; \
         rm -rf "$GNUPGHOME"; \
@@ -158,8 +162,6 @@ RUN ln -sf "/usr/lib/rabbitmq/lib/rabbitmq_server-$RABBITMQ_VERSION/plugins" /pl
 
 
 RUN \
-    /usr/lib/rabbitmq/bin/rabbitmq-plugins enable rabbitmq_management && \
-    /usr/lib/rabbitmq/bin/rabbitmq-plugins enable rabbitmq_mqtt && \
     wget https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb && \
     dpkg -i erlang-solutions_1.0_all.deb && \
     rm erlang-solutions_1.0_all.deb && \
@@ -180,18 +182,19 @@ RUN \
     cd ${dir}/${repo}-${tag} && \
     make dist && \
     cp plugins/rabbitmq_topic_acl-*.ez /plugins && \
-    cd ..  && \
+    cd .. && \
     rm -fR $dir && \
     apt-get purge -y --auto-remove ca-certificates wget
 
-
-
-RUN /usr/lib/rabbitmq/bin/rabbitmq-plugins enable rabbitmq_topic_acl
-
-#COPY docker-entrypoint.sh /usr/local/bin/
 COPY docker-entrypoint.sh /
-#RUN ln -s /usr/local/bin/docker-entrypoint.sh / # backwards compat
+COPY aclfile /
+
 ENTRYPOINT ["/docker-entrypoint.sh"]
+
+RUN \
+    /usr/lib/rabbitmq/bin/rabbitmq-plugins enable --offline rabbitmq_management && \
+    /usr/lib/rabbitmq/bin/rabbitmq-plugins enable --offline rabbitmq_mqtt && \
+    /usr/lib/rabbitmq/bin/rabbitmq-plugins enable --offline rabbitmq_topic_acl
 
 # 5672 rabbitmq-server - amqp port
 # 15672 rabbitmq-server - for management plugin
