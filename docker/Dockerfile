@@ -187,6 +187,7 @@ RUN \
     apt-get purge -y --auto-remove ca-certificates wget
 
 COPY docker-entrypoint.sh /
+COPY aclfile /
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
