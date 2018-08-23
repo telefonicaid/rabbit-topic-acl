@@ -49,7 +49,6 @@ get_credentials() ->
                             _ -> {ok, <<"guest">>}
                           end
                    end,
-  rabbit_log:info("default_user [~s]", [application:get_env(default_user)]),
   rabbit_log:info("using credentials of user [~s]", [Admin]),
   {Admin, Password}.
 
