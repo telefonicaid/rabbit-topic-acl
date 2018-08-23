@@ -58,7 +58,8 @@
 init(Ch) ->
   {ok, Exchange} = application:get_env(rabbitmq_topic_acl, trashexchange),
   {ok, Queue} = application:get_env(rabbitmq_topic_acl, trashqueue),
-  {ok, Admin} = application:get_env(rabbitmq_topic_acl, acladmin),
+%%%  {ok, Admin} = application:get_env(rabbitmq_topic_acl, acladmin),
+  {Admin, Guest} = rabbit_topic_acl_sup:get_credentials(),
 
   #state{
     user=rabbit_channel:get_user(Ch),
@@ -96,22 +97,22 @@ intercept(#'basic.publish'{routing_key = RoutingKeyBin, exchange = Exchange} = M
 intercept(#'exchange.bind'{routing_key = _RoutingKeyBin} = Method,
           Content, 
           _State = #state{user = _User, vhost = _VHost}) ->
-	  
-	  rabbit_log:debug("Intercepting exchange.bind"),
-	  {Method, Content};
+          
+          rabbit_log:debug("Intercepting exchange.bind"),
+          {Method, Content};
 
 intercept(#'exchange.unbind'{routing_key = _RoutingKeyBin} = Method,
           Content, 
           _State = #state{user = _User, vhost = _VHost}) ->
-	  
-	  rabbit_log:debug("Intercepting exchange.unbind"),
-	  {Method, Content};
+          
+          rabbit_log:debug("Intercepting exchange.unbind"),
+          {Method, Content};
 
 intercept(#'queue.bind'{routing_key = RoutingKeyBin, queue = Queue} = Method,
           Content, 
           _State = #state{user = {_, Username, _, _}, vhost = _VHost, administrator= Admin, queue = Trash}) ->
-	  
-	rabbit_log:debug("Intercepting queue.bind: ~s", [Queue]),
+          
+        rabbit_log:debug("Intercepting queue.bind: ~s", [Queue]),
 
   case authorize(Username, RoutingKeyBin, read) of
     true ->
@@ -128,9 +129,9 @@ intercept(#'queue.bind'{routing_key = RoutingKeyBin, queue = Queue} = Method,
 intercept(#'queue.unbind'{routing_key = _RoutingKeyBin} = Method,
           Content, 
           _State = #state{user = _User, vhost = _VHost}) ->
-	  
-	  rabbit_log:debug("Intercepting queue.unbind "),
-	  {Method, Content};
+          
+          rabbit_log:debug("Intercepting queue.unbind "),
+          {Method, Content};
 
 intercept(Method, Content, _State) ->
     {Method, Content}.
