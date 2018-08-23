@@ -184,7 +184,7 @@ RUN \
     cp plugins/rabbitmq_topic_acl-*.ez /plugins && \
     cd .. && \
     rm -fR $dir && \
-    apt-get purge -y --auto-remove ca-certificates wget
+    apt-get purge -y --auto-remove ca-certificates wget g++ make git build-essential
 
 COPY docker-entrypoint.sh /
 COPY aclfile /
