@@ -11,9 +11,7 @@ iot-rabbit:
     - "25672:25672"
   environment:
     - RABBITMQ_DEFAULT_USER=iota
-    - RABBITMQ_DEFAULT_PASS=iota
-    - RABBITMQ_MQTT_DEFAULT_USER=iota
-    - RABBITMQ_MQTT_DEFAULT_PASS=iota
-     log_driver: json-file
+    - RABBITMQ_DEFAULT_PASS=iotapwd
+  log_driver: json-file
   log_opt:
     max-size: "250m"
