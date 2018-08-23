@@ -95,12 +95,6 @@ declare -A configDefaults=(
 
         [ssl_fail_if_no_peer_cert]='true'
         [ssl_verify]='verify_peer'
-
-        [mqtt_default_user]='guest'
-        [mqtt_default_pass]='guest'
-
-        [mqtt_vhost]='/'
-        [mqtt_exchange]='amq.topic'
 )
 
 haveConfig=

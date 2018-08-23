@@ -162,8 +162,6 @@ RUN ln -sf "/usr/lib/rabbitmq/lib/rabbitmq_server-$RABBITMQ_VERSION/plugins" /pl
 
 
 RUN \
-    /usr/lib/rabbitmq/bin/rabbitmq-plugins enable rabbitmq_management && \
-    /usr/lib/rabbitmq/bin/rabbitmq-plugins enable rabbitmq_mqtt && \
     wget https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb && \
     dpkg -i erlang-solutions_1.0_all.deb && \
     rm erlang-solutions_1.0_all.deb && \
@@ -188,11 +186,14 @@ RUN \
     rm -fR $dir && \
     apt-get purge -y --auto-remove ca-certificates wget
 
-RUN /usr/lib/rabbitmq/bin/rabbitmq-plugins enable rabbitmq_topic_acl
-
 COPY docker-entrypoint.sh /
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
+
+RUN \
+    /usr/lib/rabbitmq/bin/rabbitmq-plugins enable --offline rabbitmq_management && \
+    /usr/lib/rabbitmq/bin/rabbitmq-plugins enable --offline rabbitmq_mqtt && \
+    /usr/lib/rabbitmq/bin/rabbitmq-plugins enable --offline rabbitmq_topic_acl
 
 # 5672 rabbitmq-server - amqp port
 # 15672 rabbitmq-server - for management plugin
