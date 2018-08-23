@@ -5,8 +5,6 @@
               {applications,[kernel,stdlib,mnesia,rabbit_common, rabbit, amqp_client]},
               {mod,{rabbit_topic_acl,[]}},
               {env,[
-               {acladmin, <<"guest">>},
-               {aclpassword, <<"guest">>},
                {exchange, <<"_topicacladmin">>},
                {trashexchange, <<"_trash">>},
                {trashqueue, <<"_trashqueue">> }
