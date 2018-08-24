@@ -184,7 +184,14 @@ RUN \
     cp plugins/rabbitmq_topic_acl-*.ez /plugins && \
     cd .. && \
     rm -fR $dir && \
-    apt-get purge -y --auto-remove ca-certificates wget g++ make git build-essential
+    apt-get purge -y --auto-remove ca-certificates \
+            wget \
+            g++ \
+            make \
+            git \
+            build-essential \
+            curl \
+            rpm
 
 COPY docker-entrypoint.sh /
 COPY aclfile /
@@ -194,9 +201,7 @@ ENTRYPOINT ["/docker-entrypoint.sh"]
 RUN \
     /usr/lib/rabbitmq/bin/rabbitmq-plugins enable --offline rabbitmq_management && \
     /usr/lib/rabbitmq/bin/rabbitmq-plugins enable --offline rabbitmq_mqtt && \
-    /usr/lib/rabbitmq/bin/rabbitmq-plugins enable --offline rabbitmq_topic_acl && \
-    /usr/lib/rabbitmq/bin/rabbitmqctl eval "aclstore:load_permissions_file('/aclfile')."
-
+    /usr/lib/rabbitmq/bin/rabbitmq-plugins enable --offline rabbitmq_topic_acl
 
 # 5672 rabbitmq-server - amqp port
 # 15672 rabbitmq-server - for management plugin
