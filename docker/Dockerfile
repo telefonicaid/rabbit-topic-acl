@@ -156,22 +156,18 @@ RUN mkdir -p /var/lib/rabbitmq /etc/rabbitmq \
 VOLUME /var/lib/rabbitmq
 
 # add a symlink to the .erlang.cookie in /root so we can "docker exec rabbitmqctl ..." without gosu
-RUN ln -sf /var/lib/rabbitmq/.erlang.cookie /root/
-
-RUN ln -sf "/usr/lib/rabbitmq/lib/rabbitmq_server-$RABBITMQ_VERSION/plugins" /plugins
-
-
 RUN \
+    ln -sf /var/lib/rabbitmq/.erlang.cookie /root/ && \
+    ln -sf "/usr/lib/rabbitmq/lib/rabbitmq_server-$RABBITMQ_VERSION/plugins" /plugins && \
+    #
+    # Install elixir from erlang-solutions
     wget https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb && \
     dpkg -i erlang-solutions_1.0_all.deb && \
     rm erlang-solutions_1.0_all.deb && \
     apt-get update && \
-    apt-get install elixir
-
-#
-# Install RabbitMQ Topic ACL plugin
-RUN \
-    # Install Rabbit ACL plugin
+    apt-get install elixir && \
+    #
+    # Install RabbitMQ Topic ACL plugin
     tag=master && \
     user="telefonicaid" && \
     repo="rabbit-topic-acl" && \
@@ -196,12 +192,12 @@ RUN \
 COPY docker-entrypoint.sh /
 COPY aclfile /
 
-ENTRYPOINT ["/docker-entrypoint.sh"]
-
 RUN \
     /usr/lib/rabbitmq/bin/rabbitmq-plugins enable --offline rabbitmq_management && \
     /usr/lib/rabbitmq/bin/rabbitmq-plugins enable --offline rabbitmq_mqtt && \
     /usr/lib/rabbitmq/bin/rabbitmq-plugins enable --offline rabbitmq_topic_acl
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
 
 # 5672 rabbitmq-server - amqp port
 # 15672 rabbitmq-server - for management plugin
