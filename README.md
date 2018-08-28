@@ -323,7 +323,7 @@ The functionality can be coarsely divided into three groups:
 
 The following sections describe each group in detail.
 
-#### ACL Database plugin
+#### ACL Database plugin
 
 ##### Overview
 
