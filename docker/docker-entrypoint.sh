@@ -396,4 +396,9 @@ if [ "$haveSslConfig" ] && [ -f "$combinedSsl" ]; then
         export RABBITMQ_CTL_ERL_ARGS="${RABBITMQ_CTL_ERL_ARGS:-} $sslErlArgs"
 fi
 
-exec "$@"
+
+echo "[ rabbit entrypoint start ] "
+/etc/init.d/rabbitmq-server restart &
+sleep 30
+/usr/lib/rabbitmq/bin/rabbitmqctl eval "aclstore:load_permissions_file('/aclfile')."
+tail -f /var/log/rabbitmq/startup_log

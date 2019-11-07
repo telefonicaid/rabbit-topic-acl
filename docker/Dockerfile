@@ -1,4 +1,4 @@
-FROM debian:stretch-slim
+FROM debian:buster-slim
 
 RUN set -eux; \
         apt-get update; \
@@ -13,6 +13,7 @@ RUN set -eux; \
                 zip \
                 git \
                 python \
+                rsync \
         ; \
         rm -rf /var/lib/apt/lists/*
 
@@ -55,27 +56,6 @@ RUN set -eux; \
         gosu nobody true;
         #\
         #apt-get purge -y --auto-remove $fetchDeps
-
-# RabbitMQ 3.6.15+ requires Erlang 19.3+ (and Stretch only has 19.2); https://www.rabbitmq.com/which-erlang.html
-# so we'll pull Erlang from Buster instead (not using Erlang Solutions since their multiarch support is extremely limited)
-RUN set -eux; \
-# add buster sources.list
-        sed 's/stretch/buster/g' /etc/apt/sources.list \
-                | tee /etc/apt/sources.list.d/buster.list; \
-# update apt-preferences such that we get only erlang* from buster (and erlang* only from buster)
-        { \
-                echo 'Package: *'; \
-                echo 'Pin: release n=buster*'; \
-                echo 'Pin-Priority: 1'; \
-                echo; \
-                echo 'Package: erlang*'; \
-                echo 'Pin: release n=buster*'; \
-                echo 'Pin-Priority: 999'; \
-                echo; \
-                echo 'Package: erlang*'; \
-                echo 'Pin: release n=stretch*'; \
-                echo 'Pin-Priority: -10'; \
-        } | tee /etc/apt/preferences.d/buster-erlang
 
 # install Erlang
 RUN set -eux; \
@@ -159,11 +139,6 @@ VOLUME /var/lib/rabbitmq
 RUN \
     ln -sf /var/lib/rabbitmq/.erlang.cookie /root/ && \
     ln -sf "/usr/lib/rabbitmq/lib/rabbitmq_server-$RABBITMQ_VERSION/plugins" /plugins && \
-    #
-    # Install elixir from erlang-solutions
-    wget https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb && \
-    dpkg -i erlang-solutions_1.0_all.deb && \
-    rm erlang-solutions_1.0_all.deb && \
     apt-get update && \
     apt-get install elixir && \
     #
@@ -179,6 +154,8 @@ RUN \
     make dist && \
     cp plugins/rabbitmq_topic_acl-*.ez /plugins && \
     cd .. && \
+    mkdir -p /var/run/rabbitmq && \
+    chown -R rabbitmq:rabbitmq /var/run/rabbitmq && \
     rm -fR $dir && \
     apt-get purge -y --auto-remove ca-certificates \
             wget \
@@ -187,6 +164,7 @@ RUN \
             git \
             build-essential \
             curl \
+            rsync \
             rpm
 
 COPY docker-entrypoint.sh /
