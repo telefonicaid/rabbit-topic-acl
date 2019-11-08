@@ -163,7 +163,6 @@ RUN \
             make \
             git \
             build-essential \
-            curl \
             rsync \
             rpm
 
