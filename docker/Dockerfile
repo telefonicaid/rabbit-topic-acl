@@ -1,4 +1,4 @@
-FROM debian:buster-slim
+FROM debian:bullseye-slim
 
 RUN set -eux; \
         apt-get update; \
@@ -94,9 +94,9 @@ ENV PATH /usr/lib/rabbitmq/bin:$PATH
 # gpg: key 6026DFCA: public key "RabbitMQ Release Signing Key <info@rabbitmq.com>" imported
 ENV RABBITMQ_GPG_KEY 0A9AF2115F4687BD29803A206B73A36E6026DFCA
 
-ENV RABBITMQ_VERSION 3.7.21
-ENV RABBITMQ_GITHUB_TAG v3.7.21
-ENV RABBITMQ_DEBIAN_VERSION 3.7.21-1
+ENV RABBITMQ_VERSION 3.8.1
+ENV RABBITMQ_GITHUB_TAG v3.8.1
+ENV RABBITMQ_DEBIAN_VERSION 3.8.1-1
 
 RUN set -eux; \
         \
