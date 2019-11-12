@@ -398,7 +398,9 @@ fi
 
 
 echo "[ rabbit entrypoint start ] "
-/etc/init.d/rabbitmq-server restart &
+touch -f /var/log/rabbitmq/startup_log
+rabbitmq-server &
+sleep 5
 while ! curl -s -X GET http://localhost:15672 -o /tmp/d; do sleep 5; done
 /usr/lib/rabbitmq/bin/rabbitmqctl eval "aclstore:load_permissions_file('/aclfile')."
 tail -f /var/log/rabbitmq/startup_log
